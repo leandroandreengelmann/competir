@@ -2,23 +2,17 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-    const { searchParams, origin } = new URL(request.url)
+    const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/auth/reset-password'
 
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[Auth Callback] Params:', {
-            hasCode: !!code,
-            next,
-            origin
-        })
-    }
+    // Detectar a base da URL atual de forma confiável (ex: competir.app.br)
+    const requestUrl = new URL(request.url)
+    const origin = requestUrl.origin
 
-    // Criar a resposta de redirecionamento antecipadamente
-    const response = NextResponse.redirect(`${origin}${next}`)
-
-    // Adicionar um cookie de diagnóstico para ver se o browser aceita cookies no callback
-    response.cookies.set('debug-callback', 'ok', { path: '/', maxAge: 60 })
+    // URL final para onde redirecionar após o processamento
+    const redirectUrl = new URL(next, origin)
+    const response = NextResponse.redirect(redirectUrl)
 
     if (code) {
         const supabase = createServerClient(
@@ -31,13 +25,8 @@ export async function GET(request: NextRequest) {
                     },
                     setAll(cookiesToSet) {
                         cookiesToSet.forEach(({ name, value, options }) => {
-                            // Forçar atributos que ajudam no localhost
-                            const secure = origin.startsWith('https')
-                            response.cookies.set(name, value, {
-                                ...options,
-                                path: '/',
-                                secure
-                            })
+                            // Garantir que os cookies sejam propagados para a resposta de redirecionamento
+                            response.cookies.set(name, value, options)
                         })
                     },
                 },
@@ -47,11 +36,6 @@ export async function GET(request: NextRequest) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[Auth Callback] Exchange success, redirecting to:', next)
-                const cookieHeader = response.headers.get('set-cookie')
-                console.log('[Auth Callback] Set-Cookie check:', !!cookieHeader)
-            }
             return response
         }
 
@@ -60,6 +44,5 @@ export async function GET(request: NextRequest) {
     }
 
     // Sem code - erro
-    console.warn('[Auth Callback] Missing code parameter')
     return NextResponse.redirect(`${origin}/auth/forgot-password?error=missing_code`)
 }

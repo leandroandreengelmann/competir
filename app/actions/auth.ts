@@ -218,18 +218,19 @@ export async function requestPasswordResetAction(prevState: ActionState, formDat
     try {
         const supabase = await createClient()
 
-        // Montar URL de redirecionamento para /auth/reset-password
-        // Priorizar NEXT_PUBLIC_SITE_URL se disponível
+        // Detectar Site URL de forma robusta para produção e o novo domínio
         let siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
         if (!siteUrl) {
-            // Em App Router, se não tiver env, buscamos via origin da request se possível, 
-            // mas em Server Actions o origin confiável vem do cabeçalho Host
             const { headers } = await import('next/headers')
-            const host = (await headers()).get('host')
-            const protocol = host?.includes('localhost') ? 'http' : 'https'
+            const headerList = await headers()
+            const host = headerList.get('x-forwarded-host') || headerList.get('host')
+            const protocol = headerList.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https')
             siteUrl = `${protocol}://${host}`
         }
+
+        // Remover barra final se existir para evitar links quebrados
+        siteUrl = siteUrl.replace(/\/$/, '')
 
         const redirectTo = `${siteUrl}/auth/callback?next=/auth/reset-password`
 
