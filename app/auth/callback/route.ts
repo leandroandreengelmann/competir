@@ -8,7 +8,15 @@ export async function GET(request: NextRequest) {
 
     // Detectar a base da URL atual de forma confiável (ex: competir.app.br)
     const requestUrl = new URL(request.url)
-    const origin = requestUrl.origin
+    let host = request.headers.get('host') || requestUrl.host
+
+    // Força o prefixo www no domínio de produção para consistência
+    if (host === 'competir.app.br') {
+        host = `www.${host}`
+    }
+
+    const protocol = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https')
+    const origin = `${protocol}://${host}`
 
     // URL final para onde redirecionar após o processamento
     const redirectUrl = new URL(next, origin)
