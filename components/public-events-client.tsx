@@ -113,7 +113,7 @@ export function PublicEventsClient({ events, user }: PublicEventsClientProps) {
                                             <img
                                                 src={event.image_url}
                                                 alt={`Imagem de divulgação do evento ${event.name}`}
-                                                className="h-full w-full object-contain"
+                                                className="h-full w-full object-cover"
                                                 loading="lazy"
                                                 decoding="async"
                                             />
