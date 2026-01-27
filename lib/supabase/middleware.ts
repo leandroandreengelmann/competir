@@ -45,8 +45,8 @@ export async function updateSession(request: NextRequest) {
     // Redirecionamento de usuários logados tentando acessar login/signup
     if (user && (pathname === '/login' || pathname === '/signup')) {
         const url = request.nextUrl.clone()
-        // Aqui poderíamos escolher o painel baseado no role, mas por simplicidade vamos para a raiz do painel
-        url.pathname = '/painel/atleta' // Fallback seguro
+        // Agora usamos o redirecionador centralizado
+        url.pathname = '/painel'
         return NextResponse.redirect(url)
     }
 

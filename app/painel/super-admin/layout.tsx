@@ -23,7 +23,7 @@ export default async function SuperAdminLayout({
         .single()
 
     if (!profile || profile.role !== 'super_admin') {
-        redirect('/login')
+        redirect('/painel')
     }
 
     return (

@@ -8,8 +8,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Melhor Agenda",
-  description: "Sistema de Gerenciamento de Agendamentos",
+  title: "Competir",
+  description: "Sistema de Gerenciamento de Campeonatos",
 };
 
 export default function RootLayout({

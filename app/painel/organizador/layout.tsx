@@ -23,7 +23,7 @@ export default async function OrganizadorLayout({
         .single()
 
     if (!profile || profile.role !== 'organizador') {
-        redirect('/login')
+        redirect('/painel')
     }
 
     return (

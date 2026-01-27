@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { CalendarPlus, LayoutDashboard, Calendar, Plus, Tags, Wallet } from "lucide-react"
+import { CalendarPlus, LayoutDashboard, Calendar, Plus, Tags, Wallet, LogOut } from "lucide-react"
+import { logoutAction } from "@/app/actions/auth"
 
 interface OrganizerSidebarProps {
     className?: string
@@ -48,9 +49,9 @@ export function OrganizerSidebar({ className }: OrganizerSidebarProps) {
     return (
         <aside className={cn("w-64 border-r bg-card min-h-screen p-6 flex flex-col gap-6", className)}>
             <div className="font-bold text-2xl tracking-tight text-primary">
-                Organizador
+                Competir
             </div>
-            <nav className="flex flex-col gap-2">
+            <nav className="flex flex-col gap-2 flex-1">
                 {links.map((link) => (
                     <Link
                         key={link.href}
@@ -67,6 +68,16 @@ export function OrganizerSidebar({ className }: OrganizerSidebarProps) {
                     </Link>
                 ))}
             </nav>
+
+            <div className="border-t pt-4">
+                <button
+                    onClick={() => logoutAction()}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-destructive hover:bg-destructive/10 w-full"
+                >
+                    <LogOut className="h-4 w-4" />
+                    Sair
+                </button>
+            </div>
         </aside>
     )
 }

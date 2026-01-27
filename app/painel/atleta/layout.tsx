@@ -22,7 +22,7 @@ export default async function AtletaLayout({
         .single()
 
     if (!profile || profile.role !== 'atleta') {
-        redirect('/login')
+        redirect('/painel')
     }
 
     return (
