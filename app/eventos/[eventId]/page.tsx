@@ -35,14 +35,22 @@ export default async function EventDetailsPage({ params }: PageProps) {
 
     const supabase = await createClient()
 
-    // Buscar evento público (não exige login)
+    // Buscar evento público
     const { data: event } = await supabase
         .from('events')
-        .select('id, name, address, address_text, address_formatted, lat, lng, place_id, description, date, image_url, is_open_for_inscriptions, info_published')
+        .select('id, organizer_id, name, address, address_text, address_formatted, lat, lng, place_id, description, date, image_url, is_open_for_inscriptions, info_published, is_published')
         .eq('id', eventId)
         .single()
 
+    // Buscar usuário para determinar permissão de acesso a eventos privados
+    const user = await getCurrentUser()
+
     if (!event) {
+        notFound()
+    }
+
+    // Se o evento não estiver publicado, apenas o dono (organizador) pode ver
+    if (!event.is_published && (!user || user.id !== event.organizer_id)) {
         notFound()
     }
 
@@ -100,8 +108,8 @@ export default async function EventDetailsPage({ params }: PageProps) {
         }
     }
 
-    // Buscar usuário para determinar fluxo de inscrição
-    const user = await getCurrentUser()
+    // Buscar usuário para determinar fluxo de inscrição (já buscado acima)
+    // const user = await getCurrentUser()
 
     const formattedDate = new Date(event.date).toLocaleDateString('pt-BR', {
         weekday: 'long',

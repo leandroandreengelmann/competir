@@ -30,7 +30,7 @@ export async function getAllPublicEventsAction(): Promise<Event[]> {
         const { data: events, error } = await supabase
             .from('events')
             .select('id, name, address, description, date, organizer_id, image_url')
-            .eq('is_open_for_inscriptions', true)
+            .eq('is_published', true)
             .order('date', { ascending: true })
 
         if (error) {

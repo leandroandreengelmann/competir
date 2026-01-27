@@ -114,6 +114,51 @@ function buildMatchesFromSlots(
     return matches
 }
 
+// Inicia as inscrições e publica o evento
+export async function startEventInscriptionsAction(eventId: string): Promise<ActionState> {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') {
+        return { error: 'Não autorizado.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        // Validar ownership
+        const { data: event } = await supabase
+            .from('events')
+            .select('id, organizer_id')
+            .eq('id', eventId)
+            .eq('organizer_id', user.id)
+            .single()
+
+        if (!event) {
+            return { error: 'Evento não encontrado ou não autorizado.' }
+        }
+
+        // Publicar e abrir inscrições
+        const { error } = await supabase
+            .from('events')
+            .update({
+                is_published: true,
+                is_open_for_inscriptions: true
+            })
+            .eq('id', eventId)
+
+        if (error) throw error
+
+        revalidatePath(`/painel/organizador/eventos/${eventId}`)
+        revalidatePath(`/eventos/${eventId}`)
+        revalidatePath('/')
+
+        return { success: true, message: 'Inscrições iniciadas e evento publicado!' }
+    } catch (error) {
+        console.error('Erro ao iniciar inscrições:', error)
+        return { error: 'Erro ao processar. Tente novamente.' }
+    }
+}
+
+
 // Para as inscrições de um evento e trava todas as suas categorias
 export async function stopEventRegistrationsAction(eventId: string): Promise<ActionState> {
     const user = await getCurrentUser()

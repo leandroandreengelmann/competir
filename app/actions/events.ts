@@ -87,7 +87,9 @@ export async function createEventAction(prevState: ActionState, formData: FormDa
                 lng,
                 place_id,
                 date,
-                image_url: null
+                image_url: null,
+                is_open_for_inscriptions: false,
+                is_published: false
             })
             .select('id')
             .single()

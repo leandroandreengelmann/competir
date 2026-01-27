@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Plus, Tags, Users, RotateCcw, ClipboardList } from "lucide-react"
 import { AddCategoriesDialog } from "@/components/add-categories-dialog"
 import { getEventCategoriesAction } from "@/app/actions/event-categories"
-import { stopEventRegistrationsAction, reopenEventRegistrationsAction } from "@/app/actions/bracket-management"
+import { stopEventRegistrationsAction, reopenEventRegistrationsAction, startEventInscriptionsAction } from "@/app/actions/bracket-management"
 import { toast } from "sonner"
 import {
     AlertDialog,
@@ -30,6 +30,7 @@ interface Event {
     description: string
     date: string
     is_open_for_inscriptions?: boolean
+    is_published?: boolean
 }
 
 interface Category {
@@ -72,9 +73,27 @@ export function EventPageClient({ event }: EventPageClientProps) {
         router.refresh()
     }
 
+    const [isStarting, setIsStarting] = React.useState(false)
     const [isStopping, setIsStopping] = React.useState(false)
     const [isReopening, setIsReopening] = React.useState(false)
     const [showReopenDialog, setShowReopenDialog] = React.useState(false)
+
+    async function handleStartInscriptions() {
+        setIsStarting(true)
+        try {
+            const result = await startEventInscriptionsAction(event.id)
+            if (result.success) {
+                toast.success(result.message)
+                router.refresh()
+            } else {
+                toast.error(result.error)
+            }
+        } catch (error) {
+            toast.error('Erro ao iniciar inscrições')
+        } finally {
+            setIsStarting(false)
+        }
+    }
 
     async function handleStopRegistrations() {
         if (!confirm('Tem certeza que deseja encerrar as inscrições? Isso irá gerar as chaves definitivas e não poderá ser desfeito.')) {
@@ -117,6 +136,7 @@ export function EventPageClient({ event }: EventPageClientProps) {
 
     // Normalizar is_open_for_inscriptions para boolean
     const isOpenForInscriptions = event.is_open_for_inscriptions !== false
+    const isPublished = event.is_published === true
 
     return (
         <div className="space-y-8">
@@ -139,7 +159,19 @@ export function EventPageClient({ event }: EventPageClientProps) {
                             </span>
                         </div>
                     </div>
-                    {isOpenForInscriptions && (
+                    {/* Botão de Controle de Fluxo - 3 Estados */}
+                    {!isPublished ? (
+                        // Estado 1: Evento Privado
+                        <Button
+                            variant="default"
+                            onClick={handleStartInscriptions}
+                            disabled={isStarting}
+                            className="shrink-0"
+                        >
+                            {isStarting ? 'Iniciando...' : 'Iniciar Inscrições'}
+                        </Button>
+                    ) : isOpenForInscriptions ? (
+                        // Estado 2: Evento Público + Aberto
                         <Button
                             variant="destructive"
                             onClick={handleStopRegistrations}
@@ -148,8 +180,8 @@ export function EventPageClient({ event }: EventPageClientProps) {
                         >
                             {isStopping ? 'Encerrando...' : 'Parar Inscrições'}
                         </Button>
-                    )}
-                    {!isOpenForInscriptions && (
+                    ) : (
+                        // Estado 3: Evento Público + Fechado
                         <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-red-500 border-red-500 px-4 py-2">
                                 Inscrições Encerradas
@@ -161,7 +193,7 @@ export function EventPageClient({ event }: EventPageClientProps) {
                                 className="shrink-0 gap-2"
                             >
                                 <RotateCcw className="h-4 w-4" />
-                                {isReopening ? 'Reabrindo...' : 'Reabrir Inscrições'}
+                                {isReopening ? 'Reiniciando...' : 'Reiniciar Inscrições'}
                             </Button>
                         </div>
                     )}
