@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# agents and cleanup
+.agent/
+.gemini/
+_PENDING_CLEANUP/

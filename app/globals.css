@@ -1,26 +1,170 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Foundations / Backgrounds */
+  --background: #FDFDFD;
+  --foreground: #181D27;
+
+  --surface: #FFFFFF;
+  --surface-secondary: #F9F9FB;
+
+  /* Foundations / Colors */
+  --primary: #6941C6;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #53389E;
+
+  --secondary: #F9F9FB;
+  --secondary-foreground: #181D27;
+
+  --muted: #F3F4F6;
+  --muted-foreground: #717680;
+
+  --accent: #F9F9FB;
+  --accent-foreground: #181D27;
+
+  --destructive: #F04438;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E9EAEB;
+  --input: #E9EAEB;
+  --ring: #6941C6;
+
+  /* Status */
+  --success: #17B26A;
+  --success-foreground: #FFFFFF;
+  --warning: #F79009;
+  --warning-foreground: #FFFFFF;
+  --info: #2E90FA;
+  --info-foreground: #FFFFFF;
+
+  /* Typography Colors (Aliases) */
+  --text-primary: #181D27;
+  --text-muted: #717680;
+
+  /* Radii */
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+.dark {
+  /* Foundations / Backgrounds */
+  --background: #0C0E12;
+  --foreground: #FAFAFA;
+
+  --surface: #13161B;
+  --surface-secondary: #181B21;
+
+  /* Foundations / Colors */
+  --primary: #6941C6;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #53389E;
+
+  --secondary: #181B21;
+  --secondary-foreground: #FAFAFA;
+
+  --muted: #1F242F;
+  --muted-foreground: #94979C;
+
+  --accent: #181B21;
+  --accent-foreground: #FAFAFA;
+
+  --destructive: #F04438;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #373A41;
+  --input: #373A41;
+  --ring: #6941C6;
+
+  /* Status */
+  --success: #17B26A;
+  --success-foreground: #FFFFFF;
+  --warning: #F79009;
+  --warning-foreground: #FFFFFF;
+  --info: #2E90FA;
+  --info-foreground: #FFFFFF;
+
+  /* Typography Colors (Aliases) */
+  --text-primary: #FAFAFA;
+  --text-muted: #94979C;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+
+  /* Brand Colors explicitly defined to match Primary */
+  --color-brand-50: #F9F5FF;
+  --color-brand-500: #6941C6;
+  --color-brand-600: #53389E;
+  --color-brand-950: #2C1C5F;
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  --font-sans: "Inter", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
