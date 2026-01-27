@@ -190,3 +190,52 @@ export async function updateEventAction(eventId: string, prevState: ActionState,
         return { error: 'Erro ao atualizar evento. Tente novamente.' }
     }
 }
+
+export async function deleteEventAction(eventId: string): Promise<ActionState> {
+    const user = await getCurrentUser()
+
+    if (!user || user.role !== 'organizador') {
+        return { error: 'Não autorizado.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        // Antes de deletar, buscar o evento para saber se tem imagem
+        const { data: event, error: fetchError } = await supabase
+            .from('events')
+            .select('image_url, organizer_id')
+            .eq('id', eventId)
+            .single()
+
+        if (fetchError || !event) {
+            return { error: 'Evento não encontrado.' }
+        }
+
+        // Validar se o usuário é o dono
+        if (event.organizer_id !== user.id) {
+            return { error: 'Você não tem permissão para excluir este evento.' }
+        }
+
+        // Tentar deletar o evento
+        const { error: deleteError } = await supabase
+            .from('events')
+            .delete()
+            .eq('id', eventId)
+
+        if (deleteError) {
+            console.error('Erro ao deletar evento:', deleteError)
+            if (deleteError.code === '23503') {
+                return { error: 'Não é possível excluir este evento pois ele já possui categorias ou inscrições vinculadas.' }
+            }
+            return { error: 'Erro ao excluir evento. Tente novamente.' }
+        }
+
+        revalidatePath('/painel/organizador/eventos')
+
+        return { success: true, message: 'Evento excluído com sucesso!' }
+    } catch (error) {
+        console.error('Erro ao excluir evento:', error)
+        return { error: 'Erro ao excluir evento. Tente novamente.' }
+    }
+}
