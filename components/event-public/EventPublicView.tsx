@@ -50,6 +50,7 @@ interface Event {
     date: string
     image_url: string | null
     is_open_for_inscriptions: boolean
+    info_published?: boolean
 }
 
 interface EventPublicViewProps {
@@ -88,76 +89,95 @@ export function EventPublicView({ event, user, publishedInfo, inscriptionUrl }: 
 
             {/* Conteúdo principal */}
             <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-                <div className="space-y-16">
+                {event.info_published ? (
+                    <div className="space-y-16">
 
-                    {/* (1) HEADER DO EVENTO — Layout 2 colunas */}
-                    <div className="grid gap-8 lg:grid-cols-2 items-start">
-                        {/* Coluna esquerda: Poster quadrado */}
-                        <div className="w-full max-w-xl mx-auto lg:mx-0">
+                        {/* (1) HEADER DO EVENTO — Layout 2 colunas */}
+                        <div className="grid gap-8 lg:grid-cols-2 items-start">
+                            {/* Coluna esquerda: Poster quadrado */}
+                            <div className="w-full max-w-xl mx-auto lg:mx-0">
+                                <EventPosterSquare
+                                    imageUrl={event.image_url}
+                                    eventName={event.name}
+                                />
+                            </div>
+
+                            {/* Coluna direita: Info Card + Localização */}
+                            <div className="flex flex-col gap-8">
+                                <EventInfoCard
+                                    name={event.name}
+                                    date={event.date}
+                                    isOpen={event.is_open_for_inscriptions}
+                                    inscriptionUrl={inscriptionUrl}
+                                />
+
+                                <EventLocationCard
+                                    address={event.address}
+                                    address_formatted={event.address_formatted}
+                                    lat={event.lat}
+                                    lng={event.lng}
+                                />
+                            </div>
+                        </div>
+
+                        {/* (2) NAVEGAÇÃO DE SEÇÕES (Tabs) */}
+                        <div className="pt-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                            <EventTabs
+                                activeTab="info"
+                                onTabChange={() => { }}
+                            />
+                        </div>
+
+                        {/* (3) CONTEÚDO DINÂMICO (Acordeon) */}
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key="info"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className="bg-white rounded-lg p-1 border border-border"
+                            >
+                                <div className="p-4 sm:p-8 space-y-8">
+                                    <div className="max-w-3xl">
+                                        <h2 className="text-3xl font-black tracking-tight text-foreground mb-4">Informações Gerais</h2>
+                                        <p className="text-muted-foreground font-medium">
+                                            Confira abaixo todos os detalhes e regras oficiais para o evento.
+                                            Selecione um tópico para expandir.
+                                        </p>
+                                    </div>
+
+                                    {faqItems.length > 0 ? (
+                                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+                                            <EventFAQAccordion items={faqItems} />
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-lg bg-muted/5">
+                                            <p className="text-muted-foreground font-semibold">Nenhuma informação geral disponível.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center gap-12 py-12">
+                        <div className="w-full max-w-xl">
                             <EventPosterSquare
                                 imageUrl={event.image_url}
                                 eventName={event.name}
                             />
                         </div>
-
-                        {/* Coluna direita: Info Card + Localização */}
-                        <div className="flex flex-col gap-8">
-                            <EventInfoCard
-                                name={event.name}
-                                date={event.date}
-                                isOpen={event.is_open_for_inscriptions}
-                                inscriptionUrl={inscriptionUrl}
-                            />
-
-                            <EventLocationCard
-                                address={event.address}
-                                address_formatted={event.address_formatted}
-                                lat={event.lat}
-                                lng={event.lng}
-                            />
+                        <div className="text-center space-y-4 max-w-2xl px-4">
+                            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground leading-tight">
+                                {event.name}
+                            </h1>
+                            <p className="text-xl sm:text-2xl font-medium text-muted-foreground italic">
+                                Mais detalhes em breve.
+                            </p>
                         </div>
                     </div>
-
-                    {/* (2) NAVEGAÇÃO DE SEÇÕES (Tabs) */}
-                    <div className="pt-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                        <EventTabs
-                            activeTab="info"
-                            onTabChange={() => { }}
-                        />
-                    </div>
-
-                    {/* (3) CONTEÚDO DINÂMICO (Acordeon) */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key="info"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
-                            className="bg-white rounded-lg p-1 border border-border"
-                        >
-                            <div className="p-4 sm:p-8 space-y-8">
-                                <div className="max-w-3xl">
-                                    <h2 className="text-3xl font-black tracking-tight text-foreground mb-4">Informações Gerais</h2>
-                                    <p className="text-muted-foreground font-medium">
-                                        Confira abaixo todos os detalhes e regras oficiais para o evento.
-                                        Selecione um tópico para expandir.
-                                    </p>
-                                </div>
-
-                                {faqItems.length > 0 ? (
-                                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
-                                        <EventFAQAccordion items={faqItems} />
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-lg bg-muted/5">
-                                        <p className="text-muted-foreground font-semibold">Nenhuma informação geral disponível.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
+                )}
             </main>
 
             {/* Rodapé Padronizado */}

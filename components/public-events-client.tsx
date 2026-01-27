@@ -28,6 +28,7 @@ interface Event {
     date: string
     organizer_id: string
     image_url?: string
+    info_published?: boolean
 }
 
 interface User {
@@ -135,48 +136,66 @@ export function PublicEventsClient({ events, user }: PublicEventsClientProps) {
                                     </Link>
                                 </CardHeader>
                                 <CardContent className="flex-1 space-y-3 pb-4">
-                                    <div className="space-y-2.5">
-                                        <div className="flex items-start gap-2.5 text-sm">
-                                            <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                            <span className="text-foreground font-medium">
-                                                {new Date(event.date).toLocaleDateString('pt-BR', {
-                                                    day: '2-digit',
-                                                    month: 'long',
-                                                    year: 'numeric'
-                                                })}
-                                            </span>
+                                    {event.info_published ? (
+                                        <>
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start gap-2.5 text-sm">
+                                                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                                    <span className="text-foreground font-medium">
+                                                        {new Date(event.date).toLocaleDateString('pt-BR', {
+                                                            day: '2-digit',
+                                                            month: 'long',
+                                                            year: 'numeric'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-2.5 text-sm">
+                                                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                                    <span className="text-muted-foreground">
+                                                        {event.address}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {event.description && (
+                                                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                                                    {event.description}
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="py-4">
+                                            <p className="text-sm font-medium text-muted-foreground italic text-center">
+                                                Mais detalhes em breve.
+                                            </p>
                                         </div>
-                                        <div className="flex items-start gap-2.5 text-sm">
-                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                            <span className="text-muted-foreground">
-                                                {event.address}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {event.description && (
-                                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                                            {event.description}
-                                        </p>
                                     )}
                                 </CardContent>
                                 <CardFooter className="pt-0">
-                                    {(!user || user.role === 'atleta') ? (
-                                        <Button
-                                            className="w-full"
-                                            asChild
-                                            disabled={!event.id}
-                                        >
-                                            <Link href={
-                                                user?.role === 'atleta'
-                                                    ? routes.athleteEventRegistration(event.id)
-                                                    : routes.loginWithNext(routes.athleteEventRegistration(event.id))
-                                            }>
-                                                Fazer inscrição
-                                            </Link>
-                                        </Button>
+                                    {event.info_published ? (
+                                        (!user || user.role === 'atleta') ? (
+                                            <Button
+                                                className="w-full"
+                                                asChild
+                                                disabled={!event.id}
+                                            >
+                                                <Link href={
+                                                    user?.role === 'atleta'
+                                                        ? routes.athleteEventRegistration(event.id)
+                                                        : routes.loginWithNext(routes.athleteEventRegistration(event.id))
+                                                }>
+                                                    Fazer inscrição
+                                                </Link>
+                                            </Button>
+                                        ) : (
+                                            <Button className="w-full" disabled variant="outline">
+                                                Apenas atletas podem se inscrever
+                                            </Button>
+                                        )
                                     ) : (
-                                        <Button className="w-full" disabled variant="outline">
-                                            Apenas atletas podem se inscrever
+                                        <Button className="w-full" variant="outline" asChild>
+                                            <Link href={`/eventos/${event.id}`}>
+                                                Ver página do evento
+                                            </Link>
                                         </Button>
                                     )}
                                 </CardFooter>
