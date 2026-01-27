@@ -24,19 +24,14 @@ export function PublicHeader({ user }: PublicHeaderProps) {
                         <Link href="/" className="hover:opacity-80 transition-opacity">
                             <h1 className="text-4xl font-bold tracking-tight text-[#53389e]">Competir</h1>
                         </Link>
-                        <p className="text-muted-foreground mt-2 text-lg">
+                        <p className="text-muted-foreground mt-2 text-lg hidden sm:block">
                             Encontre campeonatos e demonstre seu interesse
                         </p>
                     </div>
                     {!user && (
-                        <div className="flex gap-3">
-                            <Button variant="outline" asChild>
-                                <Link href="/login">Entrar</Link>
-                            </Button>
-                            <Button asChild>
-                                <Link href="/signup">Criar conta</Link>
-                            </Button>
-                        </div>
+                        <Button asChild>
+                            <Link href="/login">Acesse já</Link>
+                        </Button>
                     )}
                     {user && (
                         <Button variant="outline" asChild>
