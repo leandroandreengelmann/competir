@@ -101,27 +101,25 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="min_weight">Peso Inicial (kg)</Label>
+                            <Label htmlFor="min_weight">Peso Inicial (kg) - Opcional</Label>
                             <Input
                                 id="min_weight"
                                 name="min_weight"
                                 type="number"
                                 step="0.1"
-                                defaultValue={category?.min_weight}
-                                placeholder="0.0"
-                                required
+                                defaultValue={category?.min_weight && category.min_weight > 0 ? category.min_weight : ''}
+                                placeholder="Deixe vazio para livre"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="max_weight">Peso Final (kg)</Label>
+                            <Label htmlFor="max_weight">Peso Final (kg) - Opcional</Label>
                             <Input
                                 id="max_weight"
                                 name="max_weight"
                                 type="number"
                                 step="0.1"
-                                defaultValue={category?.max_weight}
-                                placeholder="0.0"
-                                required
+                                defaultValue={category?.max_weight && category.max_weight > 0 ? category.max_weight : ''}
+                                placeholder="Deixe vazio para livre"
                             />
                         </div>
                     </div>

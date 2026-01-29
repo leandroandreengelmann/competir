@@ -16,12 +16,40 @@ export async function createCategoryAction(prevState: ActionState, formData: For
 
     const belt_id = formData.get('belt_id') as string
     const age_group_id = formData.get('age_group_id') as string
-    const min_weight = parseFloat(formData.get('min_weight') as string)
-    const max_weight = parseFloat(formData.get('max_weight') as string)
+    const min_weight_raw = formData.get('min_weight') as string
+    const max_weight_raw = formData.get('max_weight') as string
     const registration_fee = parseFloat(formData.get('registration_fee') as string) || 0
 
-    if (!belt_id || !age_group_id || isNaN(min_weight) || isNaN(max_weight)) {
-        return { error: 'Preencha todos os campos corretamente.' }
+    if (!belt_id || !age_group_id) {
+        return { error: 'Preencha todos os campos obrigatórios.' }
+    }
+
+    // Validação condicional de peso
+    const hasMinWeight = min_weight_raw && min_weight_raw.trim() !== ''
+    const hasMaxWeight = max_weight_raw && max_weight_raw.trim() !== ''
+
+    let min_weight: number
+    let max_weight: number
+
+    if (!hasMinWeight && !hasMaxWeight) {
+        // Ambos vazios = categoria livre (sem limite de peso)
+        min_weight = -1
+        max_weight = -1
+    } else if (hasMinWeight && hasMaxWeight) {
+        // Ambos preenchidos = validar
+        min_weight = parseFloat(min_weight_raw)
+        max_weight = parseFloat(max_weight_raw)
+
+        if (isNaN(min_weight) || isNaN(max_weight)) {
+            return { error: 'Valores de peso inválidos.' }
+        }
+
+        if (min_weight > max_weight) {
+            return { error: 'Peso inicial deve ser menor ou igual ao peso final.' }
+        }
+    } else {
+        // Apenas um preenchido = erro
+        return { error: 'Preencha ambos os campos de peso ou deixe ambos vazios.' }
     }
 
     try {
@@ -65,12 +93,40 @@ export async function updateCategoryAction(id: string, prevState: ActionState, f
 
     const belt_id = formData.get('belt_id') as string
     const age_group_id = formData.get('age_group_id') as string
-    const min_weight = parseFloat(formData.get('min_weight') as string)
-    const max_weight = parseFloat(formData.get('max_weight') as string)
+    const min_weight_raw = formData.get('min_weight') as string
+    const max_weight_raw = formData.get('max_weight') as string
     const registration_fee = parseFloat(formData.get('registration_fee') as string) || 0
 
-    if (!belt_id || !age_group_id || isNaN(min_weight) || isNaN(max_weight)) {
-        return { error: 'Preencha todos os campos corretamente.' }
+    if (!belt_id || !age_group_id) {
+        return { error: 'Preencha todos os campos obrigatórios.' }
+    }
+
+    // Validação condicional de peso
+    const hasMinWeight = min_weight_raw && min_weight_raw.trim() !== ''
+    const hasMaxWeight = max_weight_raw && max_weight_raw.trim() !== ''
+
+    let min_weight: number
+    let max_weight: number
+
+    if (!hasMinWeight && !hasMaxWeight) {
+        // Ambos vazios = categoria livre (sem limite de peso)
+        min_weight = -1
+        max_weight = -1
+    } else if (hasMinWeight && hasMaxWeight) {
+        // Ambos preenchidos = validar
+        min_weight = parseFloat(min_weight_raw)
+        max_weight = parseFloat(max_weight_raw)
+
+        if (isNaN(min_weight) || isNaN(max_weight)) {
+            return { error: 'Valores de peso inválidos.' }
+        }
+
+        if (min_weight > max_weight) {
+            return { error: 'Peso inicial deve ser menor ou igual ao peso final.' }
+        }
+    } else {
+        // Apenas um preenchido = erro
+        return { error: 'Preencha ambos os campos de peso ou deixe ambos vazios.' }
     }
 
     try {

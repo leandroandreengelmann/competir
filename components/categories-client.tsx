@@ -121,7 +121,9 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                             <CardContent>
                                 <div className="space-y-1 text-sm">
                                     <p className="text-muted-foreground">
-                                        Peso: <span className="text-foreground font-medium">{cat.min_weight}kg - {cat.max_weight}kg</span>
+                                        Peso: <span className="text-foreground font-medium">
+                                            {cat.min_weight > 0 ? `${cat.min_weight}kg - ${cat.max_weight}kg` : 'Livre'}
+                                        </span>
                                     </p>
                                     <p className="text-muted-foreground">
                                         Idade: <span className="text-foreground font-medium">{cat.age_group}</span>
