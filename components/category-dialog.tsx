@@ -125,10 +125,10 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="age_group_id">Faixa Etária</Label>
+                        <Label htmlFor="age_group_id">Categoria</Label>
                         <Select name="age_group_id" defaultValue={category?.age_group_id} required>
                             <SelectTrigger>
-                                <SelectValue placeholder="Selecione a idade" />
+                                <SelectValue placeholder="Selecione a categoria" />
                             </SelectTrigger>
                             <SelectContent>
                                 {ageGroups.map((group) => (
