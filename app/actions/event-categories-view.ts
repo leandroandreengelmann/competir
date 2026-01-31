@@ -38,7 +38,7 @@ export async function getEventCategoriesWithCountsAction(
     try {
         const supabase = await createClient()
 
-        // Validar que o evento pertence ao organizador logado
+        // 1. Validar evento
         const { data: event } = await supabase
             .from('events')
             .select('id')
@@ -48,54 +48,72 @@ export async function getEventCategoriesWithCountsAction(
 
         if (!event) return []
 
-        // Buscar categorias vinculadas ao evento
-        const { data: eventCategories } = await supabase
+        // 2. Buscar categorias vinculadas (com detalhes via JOIN)
+        const { data: linkedData } = await supabase
             .from('event_categories')
-            .select('category_id')
+            .select(`
+                category:categories (
+                    id, belt, min_weight, max_weight, age_group, registration_fee, organizer_id
+                )
+            `)
             .eq('event_id', eventId)
 
-        if (!eventCategories || eventCategories.length === 0) return []
+        const linkedCategories = (linkedData || []).map(ld => {
+            const cat = ld.category
+            return Array.isArray(cat) ? cat[0] : cat
+        }).filter(c => !!c && c.organizer_id === user.id)
 
-        const categoryIds = eventCategories.map(ec => ec.category_id)
+        // 3. Buscar todas as inscrições do evento
+        const { data: registrations } = await supabase
+            .from('registrations')
+            .select('category_id, status')
+            .eq('event_id', eventId)
 
-        // Buscar categorias
-        const { data: categories } = await supabase
-            .from('categories')
-            .select('id, belt, min_weight, max_weight, age_group, registration_fee')
-            .in('id', categoryIds)
-            .eq('organizer_id', user.id)
-            .order('belt')
-            .order('min_weight')
+        const regs = registrations || []
 
-        if (!categories) return []
+        // 4. Identificar categorias que têm inscrições mas talvez não estejam vinculadas
+        const linkedIds = new Set(linkedCategories.map(c => c.id))
+        const unlinkedRegIds = Array.from(new Set(
+            regs.filter(r => !linkedIds.has(r.category_id)).map(r => r.category_id)
+        ))
 
-        // Buscar contadores de registrations para cada categoria
-        const result: CategoryWithCounts[] = []
+        let allCategories = [...linkedCategories]
 
-        for (const cat of categories) {
-            const { data: registrations } = await supabase
-                .from('registrations')
-                .select('status')
-                .eq('event_id', eventId)
-                .eq('category_id', cat.id)
+        if (unlinkedRegIds.length > 0) {
+            const { data: unlinkedCats } = await supabase
+                .from('categories')
+                .select('id, belt, min_weight, max_weight, age_group, registration_fee, organizer_id')
+                .in('id', unlinkedRegIds)
+                .eq('organizer_id', user.id)
 
-            const regs = registrations || []
+            if (unlinkedCats) {
+                allCategories = [...allCategories, ...unlinkedCats]
+            }
+        }
 
-            result.push({
+        // 5. Agrupar contadores
+        const result = allCategories.map(cat => {
+            const catRegs = regs.filter(r => r.category_id === cat.id)
+            return {
                 id: cat.id,
                 belt: cat.belt,
                 min_weight: cat.min_weight,
                 max_weight: cat.max_weight,
                 age_group: cat.age_group,
                 registration_fee: cat.registration_fee,
-                total_inscricoes: regs.length,
-                total_pagas: regs.filter(r => r.status === 'paid').length,
-                total_pendentes: regs.filter(r => r.status === 'pending_payment').length,
-                total_canceladas: regs.filter(r => r.status === 'cancelled').length
-            })
-        }
+                total_inscricoes: catRegs.length,
+                total_pagas: catRegs.filter(r => r.status === 'paid').length,
+                total_pendentes: catRegs.filter(r => r.status === 'pending_payment').length,
+                total_canceladas: catRegs.filter(r => r.status === 'cancelled').length
+            }
+        })
 
-        return result
+        // Ordenar
+        return result.sort((a, b) => {
+            const beltComp = (a.belt || '').localeCompare(b.belt || '')
+            if (beltComp !== 0) return beltComp
+            return (a.min_weight || 0) - (b.min_weight || 0)
+        })
     } catch (error) {
         console.error('Erro ao buscar categorias com contadores:', error)
         return []

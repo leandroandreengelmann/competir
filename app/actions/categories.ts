@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentUser } from "@/app/actions/user"
+import { performCategoryAudit } from "@/lib/categories-checker-logic"
 
 type ActionState = {
     success?: boolean
@@ -188,5 +189,119 @@ export async function deleteCategoryAction(id: string) {
     } catch (error) {
         console.error(error)
         return { error: 'Erro ao excluir categoria.' }
+    }
+}
+
+export async function deleteSelectedCategoriesAction(ids: string[]): Promise<ActionState> {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') return { error: 'Não autorizado.' }
+
+    if (!ids || ids.length === 0) {
+        return { error: 'Nenhuma categoria selecionada.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        const { error } = await supabase
+            .from('categories')
+            .delete()
+            .in('id', ids)
+            .eq('organizer_id', user.id)
+
+        if (error) {
+            console.error('Erro ao excluir categorias em lote:', error)
+            return { error: 'Erro ao excluir as categorias selecionadas.' }
+        }
+
+        revalidatePath('/painel/organizador/categorias')
+        return { success: true, message: `${ids.length} categorias excluídas com sucesso.` }
+    } catch (error) {
+        console.error(error)
+        return { error: 'Erro ao processar exclusão em lote.' }
+    }
+}
+
+export async function updateAllCategoriesFeeAction(newFee: number): Promise<ActionState> {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') return { error: 'Não autorizado.' }
+
+    if (newFee < 0) {
+        return { error: 'O preço não pode ser negativo.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        const { error } = await supabase
+            .from('categories')
+            .update({ registration_fee: newFee })
+            .eq('organizer_id', user.id)
+
+        if (error) {
+            console.error('Erro ao atualizar preços em lote:', error)
+            return { error: 'Erro ao atualizar os preços de todas as categorias.' }
+        }
+
+        revalidatePath('/painel/organizador/categorias')
+        return { success: true, message: `Preço de todas as categorias atualizado para R$ ${newFee.toFixed(2)}.` }
+    } catch (error) {
+        console.error(error)
+        return { error: 'Erro ao processar atualização em massa.' }
+    }
+}
+
+export async function deleteAllCategoriesAction(): Promise<ActionState> {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') return { error: 'Não autorizado.' }
+
+    try {
+        const supabase = await createClient()
+
+        const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('organizer_id', user.id)
+
+        if (error) {
+            console.error('Erro ao excluir todas as categorias:', error)
+            return { error: 'Erro ao excluir todas as categorias. Verifique se existem categorias sendo usadas em eventos ativos.' }
+        }
+
+        revalidatePath('/painel/organizador/categorias')
+        return { success: true, message: 'Todas as categorias foram excluídas com sucesso.' }
+    } catch (error) {
+        console.error(error)
+        return { error: 'Erro ao processar exclusão em massa.' }
+    }
+}
+
+export async function auditCategoriesAction() {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') return { error: 'Não autorizado.' }
+
+    try {
+        const supabase = await createClient()
+
+        const [
+            { data: categories },
+            { data: belts },
+            { data: ageGroups }
+        ] = await Promise.all([
+            supabase.from('categories').select('*').eq('organizer_id', user.id),
+            supabase.from('belts').select('id, name').order('name'),
+            supabase.from('age_groups').select('id, name').order('name')
+        ])
+
+        if (!categories || !belts || !ageGroups) {
+            return { error: 'Falha ao buscar dados para auditoria.' }
+        }
+
+        const report = performCategoryAudit(categories, belts, ageGroups)
+
+        return { success: true, report }
+    } catch (error) {
+        console.error('Erro na auditoria:', error)
+        return { error: 'Erro ao processar auditoria.' }
     }
 }

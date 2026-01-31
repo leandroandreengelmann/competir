@@ -67,6 +67,22 @@ export function AddCategoriesDialog({ open, onOpenChange, eventId, onSuccess }: 
         setSelectedIds(newSelected)
     }
 
+    const MAX_BATCH = 50
+    const isAllSelected = categories.length > 0 && selectedIds.size >= Math.min(categories.length, MAX_BATCH)
+
+    function toggleAll() {
+        if (isAllSelected) {
+            setSelectedIds(new Set())
+        } else {
+            // Seleciona apenas as primeiras 50
+            const batch = categories.slice(0, MAX_BATCH).map(c => c.id)
+            setSelectedIds(new Set(batch))
+            if (categories.length > MAX_BATCH) {
+                toast.info(`Selecionadas as primeiras ${MAX_BATCH} categorias para garantir estabilidade.`)
+            }
+        }
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
 
@@ -117,32 +133,63 @@ export function AddCategoriesDialog({ open, onOpenChange, eventId, onSuccess }: 
                                 </p>
                             </div>
                         ) : (
-                            categories.map((category) => (
+                            <>
                                 <Label
-                                    key={category.id}
-                                    htmlFor={`category-${category.id}`}
-                                    className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
+                                    className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors mb-4 sticky top-0 z-10"
                                 >
                                     <input
                                         type="checkbox"
-                                        id={`category-${category.id}`}
-                                        checked={selectedIds.has(category.id)}
-                                        onChange={() => toggleCategory(category.id)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        checked={isAllSelected}
+                                        onChange={toggleAll}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                     />
-                                    <div className="flex-1 space-y-1">
-                                        <div className="font-medium text-sm">
-                                            {category.belt} • {category.age_group}
+                                    <div className="flex-1">
+                                        <div className="font-bold text-sm text-primary uppercase tracking-tight">
+                                            {categories.length > MAX_BATCH
+                                                ? `Selecionar lote (primeiras ${MAX_BATCH} categorias)`
+                                                : `Selecionar todas as ${categories.length} categorias`}
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Peso: {category.min_weight}kg - {category.max_weight}kg
-                                            {category.registration_fee > 0 && (
-                                                <> • Inscrição: R$ {category.registration_fee.toFixed(2)}</>
-                                            )}
-                                        </div>
+                                        {categories.length > MAX_BATCH && (
+                                            <div className="text-[10px] text-muted-foreground italic">
+                                                Limite de segurança para evitar erros de rede.
+                                            </div>
+                                        )}
                                     </div>
                                 </Label>
-                            ))
+
+                                {categories.map((category) => (
+                                    <Label
+                                        key={category.id}
+                                        htmlFor={`category-${category.id}`}
+                                        className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            id={`category-${category.id}`}
+                                            checked={selectedIds.has(category.id)}
+                                            onChange={() => toggleCategory(category.id)}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <div className="flex-1 space-y-1">
+                                            <div className="font-medium text-sm">
+                                                {category.belt} • {category.age_group}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {category.min_weight === -1 && category.max_weight === -1 ? (
+                                                    null
+                                                ) : category.min_weight === 0 && category.max_weight === 0 ? (
+                                                    'Livre'
+                                                ) : (
+                                                    `${category.min_weight}kg - ${category.max_weight}kg`
+                                                )}
+                                                {category.registration_fee > 0 && (
+                                                    <> • Inscrição: R$ {category.registration_fee.toFixed(2)}</>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Label>
+                                ))}
+                            </>
                         )}
                     </div>
 

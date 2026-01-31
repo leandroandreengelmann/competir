@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Building2, Settings, Tags } from "lucide-react"
+import { LayoutDashboard, Users, Building2, Settings, Tags, ShieldCheck } from "lucide-react"
 
 interface AdminSidebarProps {
     className?: string
@@ -55,6 +55,12 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
             label: "Background Login",
             icon: Settings,
             active: pathname.startsWith("/painel/super-admin/configuracoes/login")
+        },
+        {
+            href: "/painel/super-admin/regras-categorias",
+            label: "Regras de Categorias",
+            icon: ShieldCheck,
+            active: pathname.startsWith("/painel/super-admin/regras-categorias")
         }
     ]
 

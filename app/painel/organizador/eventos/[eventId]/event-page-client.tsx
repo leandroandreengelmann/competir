@@ -7,8 +7,9 @@ import { EventForm } from "./event-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Plus, Tags, Users, RotateCcw, ClipboardList } from "lucide-react"
+import { Calendar, MapPin, Plus, Tags, Users, RotateCcw, ClipboardList, Trash2 } from "lucide-react"
 import { AddCategoriesDialog } from "@/components/add-categories-dialog"
+import { RemoveCategoriesDialog } from "@/components/remove-categories-dialog"
 import { getEventCategoriesAction } from "@/app/actions/event-categories"
 import { stopEventRegistrationsAction, reopenEventRegistrationsAction, startEventInscriptionsAction } from "@/app/actions/bracket-management"
 import { toast } from "sonner"
@@ -51,6 +52,7 @@ export function EventPageClient({ event }: EventPageClientProps) {
     const [categories, setCategories] = React.useState<Category[]>([])
     const [isLoadingCategories, setIsLoadingCategories] = React.useState(true)
     const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+    const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
 
     async function loadCategories() {
         setIsLoadingCategories(true)
@@ -218,17 +220,28 @@ export function EventPageClient({ event }: EventPageClientProps) {
                             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 space-y-0">
                                 <div className="space-y-1">
                                     <CardTitle className="text-base font-medium">Categorias Associadas</CardTitle>
-                                    <p className="text-sm text-muted-foreground">Defina as faixas e pesos permitidos para este evento.</p>
+                                    <p className="text-sm text-muted-foreground">Defina as faixas permitidas para este evento.</p>
                                 </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2 w-full sm:w-auto h-11 sm:h-9"
-                                    onClick={() => setIsDialogOpen(true)}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Adicionar Categorias
-                                </Button>
+                                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 h-11 sm:h-9 text-destructive border-destructive/20 hover:bg-destructive/10"
+                                        onClick={() => setIsRemoveDialogOpen(true)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Retirar Categorias
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 h-11 sm:h-9"
+                                        onClick={() => setIsDialogOpen(true)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Adicionar Categorias
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 {isLoadingCategories ? (
@@ -242,27 +255,48 @@ export function EventPageClient({ event }: EventPageClientProps) {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {categories.map((category) => (
-                                            <div
-                                                key={category.id}
-                                                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <Badge variant="outline">{category.belt}</Badge>
-                                                    <div className="space-y-1">
-                                                        <div className="text-sm font-medium">{category.age_group}</div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {category.min_weight}kg - {category.max_weight}kg
+                                        <div className="grid gap-3">
+                                            {categories.slice(0, 30).map((category) => (
+                                                <div
+                                                    key={category.id}
+                                                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge variant="outline">{category.belt}</Badge>
+                                                        <div className="space-y-0.5">
+                                                            <div className="text-sm font-medium">{category.age_group}</div>
+                                                            <div className="text-xs font-bold text-primary">
+                                                                {category.min_weight === -1 && category.max_weight === -1 ? (
+                                                                    null
+                                                                ) : category.min_weight === 0 && category.max_weight === 0 ? (
+                                                                    'Livre'
+                                                                ) : (
+                                                                    `${category.min_weight}kg - ${category.max_weight}kg`
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    {category.registration_fee > 0 && (
+                                                        <Badge variant="secondary">
+                                                            R$ {category.registration_fee.toFixed(2)}
+                                                        </Badge>
+                                                    )}
                                                 </div>
-                                                {category.registration_fee > 0 && (
-                                                    <Badge variant="secondary">
-                                                        R$ {category.registration_fee.toFixed(2)}
-                                                    </Badge>
-                                                )}
+                                            ))}
+                                        </div>
+
+                                        {categories.length > 30 && (
+                                            <div className="pt-2 text-center">
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    Mostrando 30 de {categories.length} categorias.
+                                                </p>
+                                                <Link href={`/painel/organizador/eventos/${event.id}/categorias`}>
+                                                    <Button variant="outline" size="sm" className="w-full">
+                                                        Ver todas as categorias
+                                                    </Button>
+                                                </Link>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
@@ -352,6 +386,13 @@ export function EventPageClient({ event }: EventPageClientProps) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <RemoveCategoriesDialog
+                open={isRemoveDialogOpen}
+                onOpenChange={setIsRemoveDialogOpen}
+                eventId={event.id}
+                categories={categories}
+                onSuccess={handleCategoriesAdded}
+            />
         </div>
     )
 }

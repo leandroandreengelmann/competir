@@ -25,62 +25,41 @@ interface Category {
  */
 export async function getEventCategoriesAction(eventId: string): Promise<Category[]> {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'organizador') {
-        console.log('[getEventCategoriesAction] Usuário não autenticado ou não é organizador')
-        return []
-    }
+    if (!user || user.role !== 'organizador') return []
 
     try {
         const supabase = await createClient()
 
-        // 1. Validar que o evento pertence ao organizador logado
-        const { data: event, error: eventError } = await supabase
-            .from('events')
-            .select('id')
-            .eq('id', eventId)
-            .eq('organizer_id', user.id)
-            .single()
-
-        if (eventError || !event) {
-            console.log('[getEventCategoriesAction] Evento não encontrado ou não pertence ao organizador:', eventError)
-            return []
-        }
-
-        // 2. Buscar IDs das categorias vinculadas ao evento
+        // 1. Buscar categorias vinculadas usando query relacional (JOIN)
+        // Isso evita o uso de cláusula IN com milhares de IDs na URL
         const { data: eventCategories, error: ecError } = await supabase
             .from('event_categories')
-            .select('category_id')
+            .select(`
+                category:categories (
+                    id, belt, min_weight, max_weight, age_group, registration_fee, organizer_id
+                )
+            `)
             .eq('event_id', eventId)
 
         if (ecError) {
-            console.error('[getEventCategoriesAction] Erro ao buscar vínculos:', ecError)
+            console.error('[getEventCategoriesAction] Erro ao buscar categorias vinculadas:', ecError)
             return []
         }
 
-        if (!eventCategories || eventCategories.length === 0) {
-            console.log('[getEventCategoriesAction] Nenhum vínculo encontrado para eventId:', eventId)
-            return []
-        }
+        // 2. Extrair categorias e filtrar por organizer_id (garantia extra além do RLS)
+        const categories = eventCategories
+            .map(ec => {
+                const cat = ec.category
+                return Array.isArray(cat) ? cat[0] : cat
+            })
+            .filter((c): c is any => !!c && c.organizer_id === user.id)
+            .sort((a, b) => {
+                const beltComp = (a.belt || '').localeCompare(b.belt || '')
+                if (beltComp !== 0) return beltComp
+                return (a.min_weight || 0) - (b.min_weight || 0)
+            })
 
-        const categoryIds = eventCategories.map(ec => ec.category_id)
-        console.log('[getEventCategoriesAction] IDs de categorias vinculadas:', categoryIds)
-
-        // 3. Buscar dados das categorias (garantindo que pertencem ao organizador)
-        const { data: categories, error: catError } = await supabase
-            .from('categories')
-            .select('id, belt, min_weight, max_weight, age_group, registration_fee')
-            .eq('organizer_id', user.id)
-            .in('id', categoryIds)
-            .order('belt')
-            .order('min_weight')
-
-        if (catError) {
-            console.error('[getEventCategoriesAction] Erro ao buscar categorias:', catError)
-            return []
-        }
-
-        console.log('[getEventCategoriesAction] Categorias retornadas:', categories?.length || 0)
-        return (categories || []) as Category[]
+        return categories as Category[]
     } catch (error) {
         console.error('[getEventCategoriesAction] Erro inesperado:', error)
         return []
@@ -89,7 +68,7 @@ export async function getEventCategoriesAction(eventId: string): Promise<Categor
 
 /**
  * Retorna categorias disponíveis para vincular ao evento
- * Exclui categorias já vinculadas
+ * Exclui categorias já vinculadas (Filtragem em memória para evitar HeadersOverflow)
  */
 export async function getAvailableCategoriesAction(eventId: string): Promise<Category[]> {
     const user = await getCurrentUser()
@@ -98,46 +77,44 @@ export async function getAvailableCategoriesAction(eventId: string): Promise<Cat
     try {
         const supabase = await createClient()
 
-        // Validar que o evento pertence ao organizador logado
-        const { data: event } = await supabase
-            .from('events')
-            .select('id')
-            .eq('id', eventId)
-            .eq('organizer_id', user.id)
-            .single()
+        // Buscar dados em paralelo para eficiência
+        const [
+            { data: allCategories, error: allErr },
+            { data: linkedCategories, error: linkedErr }
+        ] = await Promise.all([
+            // Todas as categorias do organizador
+            supabase
+                .from('categories')
+                .select('id, belt, min_weight, max_weight, age_group, registration_fee')
+                .eq('organizer_id', user.id),
+            // Apenas os IDs das categorias já vinculadas
+            supabase
+                .from('event_categories')
+                .select('category_id')
+                .eq('event_id', eventId)
+        ])
 
-        if (!event) return []
-
-        // Buscar categorias já vinculadas
-        const { data: linkedCategories } = await supabase
-            .from('event_categories')
-            .select('category_id')
-            .eq('event_id', eventId)
-
-        const linkedIds = (linkedCategories || []).map(ec => ec.category_id)
-
-        // Buscar categorias do organizador que NÃO estão vinculadas
-        let query = supabase
-            .from('categories')
-            .select('id, belt, min_weight, max_weight, age_group, registration_fee')
-            .eq('organizer_id', user.id)
-            .order('belt')
-            .order('min_weight')
-
-        if (linkedIds.length > 0) {
-            query = query.not('id', 'in', `(${linkedIds.join(',')})`)
-        }
-
-        const { data: categories, error } = await query
-
-        if (error) {
-            console.error('Erro ao buscar categorias disponíveis:', error)
+        if (allErr || linkedErr) {
+            console.error('Erro ao buscar dados para categorias disponíveis:', allErr || linkedErr)
             return []
         }
 
-        return (categories || []) as Category[]
+        if (!allCategories) return []
+
+        const linkedIds = new Set((linkedCategories || []).map(ec => ec.category_id))
+
+        // Filtrar em memória (Server-side) evite cláusula NOT IN massiva na URL
+        const available = allCategories
+            .filter(cat => !linkedIds.has(cat.id))
+            .sort((a, b) => {
+                const beltComp = (a.belt || '').localeCompare(b.belt || '')
+                if (beltComp !== 0) return beltComp
+                return (a.min_weight || 0) - (b.min_weight || 0)
+            })
+
+        return available as Category[]
     } catch (error) {
-        console.error('Erro ao buscar categorias disponíveis:', error)
+        console.error('Erro ao processar categorias disponíveis:', error)
         return []
     }
 }

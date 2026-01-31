@@ -69,24 +69,36 @@ export async function getEventCategoriesForRegistrationAction(eventId: string): 
 
         if (!event || !event.is_open_for_inscriptions) return []
 
-        // Buscar categorias vinculadas ao evento
-        const { data: eventCategories } = await supabase
-            .from('event_categories')
-            .select('category_id')
-            .eq('event_id', eventId)
-
-        if (!eventCategories || eventCategories.length === 0) return []
-
-        const categoryIds = eventCategories.map(ec => ec.category_id)
-
-        const { data: categories } = await supabase
+        // Buscar categorias vinculadas ao evento via JOIN para evitar In clause gigante
+        // NOTA: Usamos a query direta na tabela categories com filtro via event_categories
+        const { data: categories, error: catError } = await supabase
             .from('categories')
-            .select('id, belt, min_weight, max_weight, age_group, registration_fee')
-            .in('id', categoryIds)
+            .select(`
+                id, 
+                belt, 
+                min_weight, 
+                max_weight, 
+                age_group, 
+                registration_fee,
+                event_categories!inner(event_id)
+            `)
+            .eq('event_categories.event_id', eventId)
             .order('belt')
             .order('min_weight')
 
-        return (categories || []) as Category[]
+        if (catError) {
+            console.error('Erro ao buscar categorias via JOIN:', catError)
+            return []
+        }
+
+        return (categories || []).map(c => ({
+            id: c.id,
+            belt: c.belt,
+            min_weight: c.min_weight,
+            max_weight: c.max_weight,
+            age_group: c.age_group,
+            registration_fee: c.registration_fee
+        })) as Category[]
     } catch (error) {
         console.error('Erro ao buscar categorias para inscrição:', error)
         return []

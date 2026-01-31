@@ -44,6 +44,9 @@ const beltColors: Record<string, string> = {
 }
 
 export function CategoriasClient({ event, categories }: CategoriasClientProps) {
+    const categoriesWithAthletes = categories.filter(cat => (cat.total_pagas + cat.total_pendentes) > 0)
+    const totalCategories = categories.length
+
     return (
         <div className="max-w-7xl mx-auto space-y-8">
             {/* Breadcrumb */}
@@ -83,32 +86,32 @@ export function CategoriasClient({ event, categories }: CategoriasClientProps) {
                 </CardHeader>
             </Card>
 
-            {/* Título da Seção */}
-            <div>
-                <h2 className="text-2xl font-bold tracking-tight">Categorias & Atletas</h2>
-                <p className="text-muted-foreground mt-1">
-                    Visualize os atletas inscritos organizados por categoria
-                </p>
+            {/* Título da Seção e Contador */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Categorias & Atletas</h2>
+                    <p className="text-muted-foreground mt-1">
+                        Visualize os atletas inscritos organizados por categoria
+                    </p>
+                </div>
+                <Badge variant="secondary" className="w-fit h-7 px-3 text-xs font-semibold">
+                    Categorias com atletas: {categoriesWithAthletes.length} de {totalCategories} total do evento
+                </Badge>
             </div>
 
             {/* Listagem de Categorias */}
-            {categories.length === 0 ? (
+            {categoriesWithAthletes.length === 0 ? (
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">
                         <Trophy className="h-12 w-12 text-muted-foreground/30 mb-4" />
                         <p className="text-muted-foreground text-center">
-                            Nenhuma categoria vinculada a este evento ainda.
+                            Nenhuma categoria com atletas inscritos ainda.
                         </p>
-                        <Link href={`/painel/organizador/eventos/${event.id}`}>
-                            <Button variant="outline" className="mt-4">
-                                Adicionar Categorias
-                            </Button>
-                        </Link>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((category) => (
+                    {categoriesWithAthletes.map((category) => (
                         <Card key={category.id} className="hover:border-primary transition-colors">
                             <CardHeader>
                                 <div className="flex items-start justify-between gap-3">
@@ -120,9 +123,6 @@ export function CategoriasClient({ event, categories }: CategoriasClientProps) {
                                             {category.belt}
                                         </Badge>
                                         <CardTitle className="text-lg">{category.age_group}</CardTitle>
-                                        <CardDescription>
-                                            {category.min_weight}kg - {category.max_weight}kg
-                                        </CardDescription>
                                     </div>
                                     <div className="text-right shrink-0">
                                         <div className="text-2xl font-bold text-primary">
