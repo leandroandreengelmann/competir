@@ -63,6 +63,7 @@ export default async function EventDetailsPage({ params }: PageProps) {
                 .select('kb_term, answer_raw')
                 .eq('event_id', eventId)
                 .eq('status', 'APPROVED')
+                .order('sort_order', { ascending: true })
                 .order('created_at', { ascending: true }),
             supabase
                 .from('event_assistant_custom')

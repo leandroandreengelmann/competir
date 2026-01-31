@@ -14,8 +14,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { ArrowLeft, Edit, Send, Calendar, MapPin, CheckCircle, AlertCircle, Trash2, Save, Sparkles } from "lucide-react"
-import { publishEventInfoAction, unpublishEventInfoAction, updateEventResponseAction, deleteEventResponseAction, formatAnswerAction } from "@/app/actions/event-assistant"
+import { ArrowLeft, Edit, Send, Calendar, MapPin, CheckCircle, AlertCircle, Trash2, Save, Sparkles, GripVertical } from "lucide-react"
+import { publishEventInfoAction, unpublishEventInfoAction, updateEventResponseAction, deleteEventResponseAction, formatAnswerAction, updateResponsesOrderAction } from "@/app/actions/event-assistant"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -83,6 +83,17 @@ export function InfoSummaryClient({ eventId, event, responses: initialResponses,
     const [attachmentsMap, setAttachmentsMap] = React.useState<Record<string, Attachment[]>>({})
     const [isUploadingAttachment, setIsUploadingAttachment] = React.useState(false)
     const [deletingAttachmentId, setDeletingAttachmentId] = React.useState<string | null>(null)
+
+    // State para drag and drop
+    const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null)
+    const [isSavingOrder, setIsSavingOrder] = React.useState(false)
+    const [hasOrderChanged, setHasOrderChanged] = React.useState(false)
+    const [originalOrder, setOriginalOrder] = React.useState<string[]>([])
+
+    // Inicializar ordem original
+    React.useEffect(() => {
+        setOriginalOrder(responses.map(r => r.kb_term))
+    }, [responses])
 
     const handlePublish = async () => {
         setIsPublishing(true)
@@ -343,6 +354,61 @@ export function InfoSummaryClient({ eventId, event, responses: initialResponses,
         setIsDeleting(false)
     }
 
+    // Handlers de Drag and Drop
+    const handleDragStart = (index: number) => {
+        setDraggedIndex(index)
+    }
+
+    const handleDragOver = (e: React.DragEvent, targetIndex: number) => {
+        e.preventDefault()
+
+        if (draggedIndex === null || draggedIndex === targetIndex) return
+
+        const newResponses = [...responses]
+        const draggedItem = newResponses[draggedIndex]
+
+        // Remove item da posição original
+        newResponses.splice(draggedIndex, 1)
+
+        // Insere na nova posição
+        newResponses.splice(targetIndex, 0, draggedItem)
+
+        setResponses(newResponses)
+        setDraggedIndex(targetIndex)
+        setHasOrderChanged(true)
+    }
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null)
+    }
+
+    const handleSaveOrder = async () => {
+        setIsSavingOrder(true)
+
+        const orderedTerms = responses.map(r => r.kb_term)
+        const result = await updateResponsesOrderAction(eventId, orderedTerms)
+
+        if (result.success) {
+            toast.success("✅ Ordem salva com sucesso!")
+            setHasOrderChanged(false)
+            setOriginalOrder(orderedTerms)
+            router.refresh()
+        } else {
+            toast.error(result.error || "Erro ao salvar ordem")
+        }
+
+        setIsSavingOrder(false)
+    }
+
+    const handleCancelReorder = () => {
+        // Restaurar ordem original
+        const restored = originalOrder.map(term =>
+            responses.find(r => r.kb_term === term)!
+        ).filter(Boolean)
+        setResponses(restored)
+        setHasOrderChanged(false)
+    }
+
     const totalItems = responses.length + customItems.length
 
     return (
@@ -400,6 +466,41 @@ export function InfoSummaryClient({ eventId, event, responses: initialResponses,
                     </Badge>
                 </div>
 
+                {/* Botões de Salvar/Cancelar Ordem */}
+                {hasOrderChanged && (
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20 animate-in fade-in slide-in-from-top-2">
+                        <AlertCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                        <p className="text-sm font-medium text-foreground flex-1">
+                            Você reordenou os cards. Salve para aplicar as mudanças.
+                        </p>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelReorder}
+                                disabled={isSavingOrder}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSaveOrder}
+                                disabled={isSavingOrder}
+                                className="gap-2"
+                            >
+                                {isSavingOrder ? (
+                                    <>Salvando...</>
+                                ) : (
+                                    <>
+                                        <Save className="h-4 w-4" />
+                                        Salvar Ordem
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {totalItems === 0 ? (
                     <Card className="border-dashed animate-in fade-in duration-500">
                         <CardContent className="p-12 text-center">
@@ -415,17 +516,26 @@ export function InfoSummaryClient({ eventId, event, responses: initialResponses,
                         {/* Respostas da KB com Animação Staggered */}
                         {responses.map((response, i) => (
                             <Card
-                                key={i}
-                                className="group transition-all duration-300 hover:shadow-lg hover:border-primary/20 animate-in fade-in slide-in-from-bottom-2"
+                                key={response.kb_term}
+                                draggable={true}
+                                onDragStart={() => handleDragStart(i)}
+                                onDragOver={(e) => handleDragOver(e, i)}
+                                onDragEnd={handleDragEnd}
+                                className={`group transition-all duration-300 hover:shadow-lg hover:border-primary/20 animate-in fade-in slide-in-from-bottom-2 ${draggedIndex === i ? 'opacity-50 scale-95' : ''
+                                    }`}
                                 style={{
                                     animationDelay: `${i * 100}ms`,
-                                    animationFillMode: 'backwards'
+                                    animationFillMode: 'backwards',
+                                    cursor: 'grab'
                                 }}
                             >
                                 <CardHeader className="pb-3 flex flex-row items-start justify-between space-y-0">
-                                    <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground font-bold group-hover:text-foreground transition-colors">
-                                        {response.kb_term}
-                                    </CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        <GripVertical className="h-5 w-5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
+                                        <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground font-bold group-hover:text-foreground transition-colors">
+                                            {response.kb_term}
+                                        </CardTitle>
+                                    </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                                         <Button
                                             variant="ghost"

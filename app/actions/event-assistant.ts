@@ -327,12 +327,13 @@ export async function getEventInfoSummaryAction(eventId: string) {
 
         if (!event) return { error: 'Evento não encontrado' }
 
-        // Buscar todas as respostas aprovadas
+        // Buscar todas as respostas aprovadas (ordenadas por sort_order, fallback created_at)
         const { data: responses } = await supabase
             .from('event_assistant_responses')
             .select('kb_term, answer_raw, created_at')
             .eq('event_id', eventId)
             .eq('status', 'APPROVED')
+            .order('sort_order', { ascending: true })
             .order('created_at', { ascending: true })
 
         // Buscar itens customizados
@@ -485,5 +486,52 @@ export async function deleteEventResponseAction(eventId: string, kbTerm: string)
     } catch (error: any) {
         console.error('Erro ao excluir resposta:', error)
         return { error: error.message || 'Erro ao excluir resposta.' }
+    }
+}
+
+/**
+ * Atualiza a ordem de exibição das respostas do evento.
+ */
+export async function updateResponsesOrderAction(eventId: string, orderedTerms: string[]) {
+    try {
+        await validateEventOwnership(eventId)
+        const supabase = await createClient()
+
+        // Validar que todos os termos pertencem ao evento
+        const { data: existingResponses, error: checkError } = await supabase
+            .from('event_assistant_responses')
+            .select('kb_term')
+            .eq('event_id', eventId)
+
+        if (checkError) throw checkError
+
+        const validTerms = new Set((existingResponses || []).map(r => r.kb_term))
+        const invalidTerms = orderedTerms.filter(term => !validTerms.has(term))
+
+        if (invalidTerms.length > 0) {
+            return { error: 'Alguns termos não pertencem a este evento.' }
+        }
+
+        // Atualizar sort_order de cada resposta
+        for (let i = 0; i < orderedTerms.length; i++) {
+            const { error: updateError } = await supabase
+                .from('event_assistant_responses')
+                .update({
+                    sort_order: i,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('event_id', eventId)
+                .eq('kb_term', orderedTerms[i])
+
+            if (updateError) throw updateError
+        }
+
+        revalidatePath(`/painel/organizador/eventos/${eventId}/informacoes-gerais`)
+        revalidatePath(`/eventos/${eventId}`)
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Erro ao atualizar ordem das respostas:', error)
+        return { error: error.message || 'Erro ao salvar ordem.' }
     }
 }
