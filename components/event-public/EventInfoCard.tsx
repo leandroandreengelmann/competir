@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Calendar, Trophy, CheckCircle2 } from "lucide-react"
+import { Calendar, Trophy, CheckCircle2, Share2 } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,27 @@ export function EventInfoCard({ name, date, isOpen, inscriptionUrl }: EventInfoC
         month: 'long',
         year: 'numeric'
     })
+
+    const handleShare = async () => {
+        const shareData = {
+            title: name,
+            text: `Confira este evento: ${name}`,
+            url: window.location.href,
+        }
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData)
+            } catch (err) {
+                if (err instanceof Error && err.name !== 'AbortError') {
+                    console.error('Error sharing:', err)
+                }
+            }
+        } else {
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareData.text} ${shareData.url}`)}`
+            window.open(whatsappUrl, '_blank')
+        }
+    }
 
     return (
         <motion.div
@@ -86,6 +107,14 @@ export function EventInfoCard({ name, date, isOpen, inscriptionUrl }: EventInfoC
                             </Button>
                         )}
 
+                        <Button
+                            size="lg"
+                            className="w-full h-14 rounded-lg text-base font-black uppercase tracking-wider transition-all gap-2 border-2 border-primary text-primary bg-white hover:bg-primary/5"
+                            onClick={handleShare}
+                        >
+                            <Share2 className="w-5 h-5" />
+                            Compartilhar Evento
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
