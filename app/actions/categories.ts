@@ -26,32 +26,15 @@ export async function createCategoryAction(prevState: ActionState, formData: For
     }
 
     // Validação condicional de peso
+    // Tratamento de peso flexível (sem validação estrita)
     const hasMinWeight = min_weight_raw && min_weight_raw.trim() !== ''
     const hasMaxWeight = max_weight_raw && max_weight_raw.trim() !== ''
 
-    let min_weight: number
-    let max_weight: number
+    let min_weight = hasMinWeight ? parseFloat(min_weight_raw) : -1
+    let max_weight = hasMaxWeight ? parseFloat(max_weight_raw) : -1
 
-    if (!hasMinWeight && !hasMaxWeight) {
-        // Ambos vazios = categoria livre (sem limite de peso)
-        min_weight = -1
-        max_weight = -1
-    } else if (hasMinWeight && hasMaxWeight) {
-        // Ambos preenchidos = validar
-        min_weight = parseFloat(min_weight_raw)
-        max_weight = parseFloat(max_weight_raw)
-
-        if (isNaN(min_weight) || isNaN(max_weight)) {
-            return { error: 'Valores de peso inválidos.' }
-        }
-
-        if (min_weight > max_weight) {
-            return { error: 'Peso inicial deve ser menor ou igual ao peso final.' }
-        }
-    } else {
-        // Apenas um preenchido = erro
-        return { error: 'Preencha ambos os campos de peso ou deixe ambos vazios.' }
-    }
+    if (hasMinWeight && isNaN(min_weight)) min_weight = -1
+    if (hasMaxWeight && isNaN(max_weight)) max_weight = -1
 
     try {
         const supabase = await createClient()
@@ -103,32 +86,15 @@ export async function updateCategoryAction(id: string, prevState: ActionState, f
     }
 
     // Validação condicional de peso
+    // Tratamento de peso flexível (sem validação estrita)
     const hasMinWeight = min_weight_raw && min_weight_raw.trim() !== ''
     const hasMaxWeight = max_weight_raw && max_weight_raw.trim() !== ''
 
-    let min_weight: number
-    let max_weight: number
+    let min_weight = hasMinWeight ? parseFloat(min_weight_raw) : -1
+    let max_weight = hasMaxWeight ? parseFloat(max_weight_raw) : -1
 
-    if (!hasMinWeight && !hasMaxWeight) {
-        // Ambos vazios = categoria livre (sem limite de peso)
-        min_weight = -1
-        max_weight = -1
-    } else if (hasMinWeight && hasMaxWeight) {
-        // Ambos preenchidos = validar
-        min_weight = parseFloat(min_weight_raw)
-        max_weight = parseFloat(max_weight_raw)
-
-        if (isNaN(min_weight) || isNaN(max_weight)) {
-            return { error: 'Valores de peso inválidos.' }
-        }
-
-        if (min_weight > max_weight) {
-            return { error: 'Peso inicial deve ser menor ou igual ao peso final.' }
-        }
-    } else {
-        // Apenas um preenchido = erro
-        return { error: 'Preencha ambos os campos de peso ou deixe ambos vazios.' }
-    }
+    if (hasMinWeight && isNaN(min_weight)) min_weight = -1
+    if (hasMaxWeight && isNaN(max_weight)) max_weight = -1
 
     try {
         const supabase = await createClient()

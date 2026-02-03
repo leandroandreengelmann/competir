@@ -75,21 +75,32 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
     const [isUpdatingFee, setIsUpdatingFee] = useState(false)
 
     // Normalização para busca
+    // Normalização para busca
     const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
     const filteredCategories = initialCategories.filter(cat => {
-        const search = normalize(searchTerm)
+        if (!searchTerm) return true
+
+        const terms = normalize(searchTerm).split(" ").filter(t => t.length > 0)
 
         // Formatações de preço para busca
         const priceValue = cat.registration_fee.toString()
         const priceFormatted = cat.registration_fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        const priceWithPrefix = `R$ ${priceFormatted}`
 
-        return normalize(cat.belt).includes(search) ||
-            normalize(cat.age_group).includes(search) ||
-            priceValue.includes(search.replace(',', '.')) ||
-            normalize(priceFormatted).includes(search) ||
-            normalize(priceWithPrefix).includes(search)
+        // Construção do índice de busca da categoria
+        // Inclui: Faixa, Idade (Categoria), Peso Mínimo, Peso Máximo, Preço e descritivos como "livre" ou "kg"
+        const searchableText = normalize(`
+            ${cat.belt} 
+            ${cat.age_group} 
+            ${cat.min_weight}kg 
+            ${cat.max_weight}kg 
+            ${cat.min_weight === 0 && cat.max_weight === 0 ? 'livre absoluto' : ''}
+            R$ ${priceFormatted} 
+            ${priceValue}
+        `)
+
+        // Lógica AND: A categoria deve conter TODOS os termos digitados
+        return terms.every(term => searchableText.includes(term))
     })
 
     const handleAdd = () => {

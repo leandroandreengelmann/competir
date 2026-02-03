@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Calendar, MapPin, Plus, Image, MoreVertical } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { DeleteEventButton } from "@/components/delete-event-button"
+
 
 async function getOrganizerEvents(userId: string) {
     const supabase = await createClient()
@@ -91,7 +91,6 @@ export default async function EventsPage() {
 
                             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                                 <CardTitle className="text-xl line-clamp-1">{event.name}</CardTitle>
-                                <DeleteEventButton eventId={event.id} eventName={event.name} />
                             </CardHeader>
                             <CardContent className="flex-1 flex flex-col gap-4">
                                 <div className="space-y-2 text-sm text-muted-foreground">
