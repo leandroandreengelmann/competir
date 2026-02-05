@@ -227,11 +227,6 @@ export async function requestPasswordResetAction(prevState: ActionState, formDat
             let host = headerList.get('x-forwarded-host') || headerList.get('host')
             const protocol = headerList.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https')
 
-            // Força o prefixo www no domínio de produção para consistência de cookies
-            if (host === 'competir.app.br') {
-                host = `www.${host}`
-            }
-
             siteUrl = `${protocol}://${host}`
         }
 
