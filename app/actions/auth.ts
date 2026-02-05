@@ -309,10 +309,10 @@ export async function verifyOtpAndResetPasswordAction(
     // Normalizar email
     const normalizedEmail = email.trim().toLowerCase()
 
-    // Validar formato do token (6 dígitos)
+    // Validar formato do token (6-8 dígitos - Supabase pode enviar ambos)
     const cleanToken = token.replace(/\s/g, '')
-    if (!/^\d{6}$/.test(cleanToken)) {
-        return { error: 'O código deve ter 6 dígitos.' }
+    if (!/^\d{6,8}$/.test(cleanToken)) {
+        return { error: 'O código deve ter entre 6 e 8 dígitos.' }
     }
 
     // Validar senha

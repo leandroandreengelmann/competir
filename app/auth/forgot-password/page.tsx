@@ -215,7 +215,7 @@ export default function ForgotPasswordPage() {
                                         Digite o código
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground">
-                                        Enviamos um código de 6 dígitos para <strong className="text-foreground">{email}</strong>
+                                        Enviamos um código de 8 dígitos para <strong className="text-foreground">{email}</strong>
                                     </p>
                                 </CardHeader>
 
@@ -251,11 +251,11 @@ export default function ForgotPasswordPage() {
                                                             name="token"
                                                             type="text"
                                                             inputMode="numeric"
-                                                            placeholder="000000"
-                                                            maxLength={6}
+                                                            placeholder="00000000"
+                                                            maxLength={8}
                                                             required
                                                             autoFocus
-                                                            className="pl-10 h-11 text-center text-lg font-mono tracking-[0.5em] transition-all group-hover:border-primary/50 focus:ring-primary/20"
+                                                            className="pl-10 h-11 text-center text-lg font-mono tracking-[0.3em] transition-all group-hover:border-primary/50 focus:ring-primary/20"
                                                         />
                                                         <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                     </div>
