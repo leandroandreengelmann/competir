@@ -43,15 +43,6 @@ const nextConfig = {
             },
         ]
     },
-    // Otimização de Build
-    swrDelta: 60, // SWR cache window
-    experimental: {
-        // Habilita otimizações experimentais estáveis para Vercel se necessário
-    },
-    // Ignora erros de lint durante o build para evitar falhas por avisos irrelevantes
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
     // Ignora erros de TypeScript durante o build apenas se você quiser garantir que o deploy ocorra
     // mesmo com pequenos erros de tipagem. (Recomendo manter false para segurança, mas true para velocidade)
     typescript: {
