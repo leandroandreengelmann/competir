@@ -288,6 +288,86 @@ export async function resetPasswordAction(prevState: ActionState, formData: Form
     }
 }
 
+/**
+ * Verifica OTP e redefine a senha em uma única ação.
+ * Caminho principal para reset de senha (imune a email prefetching).
+ */
+export async function verifyOtpAndResetPasswordAction(
+    prevState: ActionState,
+    formData: FormData
+): Promise<ActionState> {
+    const email = formData.get('email') as string
+    const token = formData.get('token') as string
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+
+    // Validações básicas
+    if (!email || !token || !password || !confirmPassword) {
+        return { error: 'Preencha todos os campos.' }
+    }
+
+    // Normalizar email
+    const normalizedEmail = email.trim().toLowerCase()
+
+    // Validar formato do token (6 dígitos)
+    const cleanToken = token.replace(/\s/g, '')
+    if (!/^\d{6}$/.test(cleanToken)) {
+        return { error: 'O código deve ter 6 dígitos.' }
+    }
+
+    // Validar senha
+    if (password.length < 8) {
+        return { error: 'A senha deve ter pelo menos 8 caracteres.' }
+    }
+
+    if (password !== confirmPassword) {
+        return { error: 'As senhas não coincidem.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        // 1. Verificar OTP
+        const { data, error: otpError } = await supabase.auth.verifyOtp({
+            email: normalizedEmail,
+            token: cleanToken,
+            type: 'recovery',
+        })
+
+        if (otpError) {
+            console.error('Erro ao verificar OTP:', otpError)
+            // Mensagem amigável para código inválido/expirado
+            if (otpError.message.includes('expired') || otpError.message.includes('invalid')) {
+                return { error: 'Código inválido ou expirado. Solicite um novo.' }
+            }
+            return { error: translateAuthError(otpError.message) }
+        }
+
+        if (!data.session) {
+            return { error: 'Não foi possível validar o código. Tente novamente.' }
+        }
+
+        // 2. Atualizar senha (já autenticado pelo verifyOtp)
+        const { error: updateError } = await supabase.auth.updateUser({
+            password: password,
+        })
+
+        if (updateError) {
+            console.error('Erro ao atualizar senha:', updateError)
+            return { error: translateAuthError(updateError.message) }
+        }
+
+        // 3. Fazer logout para forçar novo login com a nova senha
+        await supabase.auth.signOut()
+
+        return { success: true }
+
+    } catch (error) {
+        console.error('Erro inesperado no OTP reset:', error)
+        return { error: 'Ocorreu um erro inesperado. Tente novamente.' }
+    }
+}
+
 export async function checkCpfAvailableAction(cpf: string): Promise<{ available: boolean }> {
     const cpfNumbers = cpf.replace(/\D/g, '')
     if (cpfNumbers.length !== 11) return { available: false }
