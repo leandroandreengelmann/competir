@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Pencil, Trash2, Tags, Sparkles, Search, AlertCircle } from "lucide-react"
+import { Plus, Pencil, Trash2, Tags, Sparkles, Search, AlertCircle, Filter, Activity } from "lucide-react"
 import { CategoryDialog } from "@/components/category-dialog"
 import { AICategoryDialog } from "@/components/ai-category-dialog"
 import { AICategoryCheckerDialog } from "@/components/ai-category-checker-dialog"
@@ -40,9 +40,12 @@ interface Category {
     belt_id?: string
     min_weight: number
     max_weight: number
+    min_age: number
+    max_age: number
     age_group: string
     age_group_id?: string
     registration_fee: number
+    registrations?: { status: string }[]
 }
 
 interface Belt {
@@ -73,12 +76,18 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
     const [isBulkFeeDialogOpen, setIsBulkFeeDialogOpen] = useState(false)
     const [newBulkFee, setNewBulkFee] = useState<string>("0")
     const [isUpdatingFee, setIsUpdatingFee] = useState(false)
+    const [showOnlyActive, setShowOnlyActive] = useState(false)
 
     // Normalização para busca
     // Normalização para busca
     const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
     const filteredCategories = initialCategories.filter(cat => {
+        // Filtro de Atividade
+        if (showOnlyActive && (!cat.registrations || cat.registrations.length === 0)) {
+            return false
+        }
+
         if (!searchTerm) return true
 
         const terms = normalize(searchTerm).split(" ").filter(t => t.length > 0)
@@ -277,14 +286,26 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 bg-card p-4 rounded-lg border border-primary/10 shadow-sm">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Buscar por faixa, categoria ou valor..."
-                        className="pl-10 h-10 border-primary/10 focus-visible:ring-primary"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="relative flex-1 w-full flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar por faixa, categoria ou valor..."
+                            className="pl-10 h-10 border-primary/10 focus-visible:ring-primary"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Button
+                        variant={showOnlyActive ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowOnlyActive(!showOnlyActive)}
+                        className={`h-10 gap-2 transition-all ${showOnlyActive ? 'bg-primary text-primary-foreground shadow-md' : 'border-primary/10 hover:border-primary/30'}`}
+                        title={showOnlyActive ? "Mostrando apenas ativas" : "Mostrar apenas categorias com inscritos"}
+                    >
+                        {showOnlyActive ? <Activity className="h-4 w-4 animate-pulse" /> : <Filter className="h-4 w-4" />}
+                        <span className="hidden md:inline">Ativas</span>
+                    </Button>
                 </div>
                 <div className="flex items-center gap-4 text-sm font-medium shrink-0 bg-muted/50 px-4 py-2 rounded-md">
                     <div className="flex flex-col">
@@ -334,66 +355,123 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                         return (
                             <Card
                                 key={cat.id}
-                                className={`group hover:shadow-md transition-all border-primary/5 relative ${isSelected ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-sm' : ''}`}
+                                className={`relative overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${isSelected ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-primary/5 bg-card'
+                                    }`}
                             >
-                                <div className="p-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={isSelected}
-                                                onChange={() => toggleSelection(cat.id)}
-                                                className={`h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-opacity ${isSelected ? 'opacity-100' : 'md:opacity-0 group-hover:opacity-100'}`}
-                                            />
+                                <div className="p-4 space-y-4">
+                                    {/* Header Section */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-6 bg-primary rounded-full" />
                                             <h3 className="text-sm font-black uppercase tracking-tight text-foreground/80">
                                                 {cat.belt}
                                             </h3>
                                         </div>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0"
+                                                className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary rounded-full"
                                                 onClick={() => handleEdit(cat)}
                                             >
-                                                <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-primary transition-colors" />
+                                                <Pencil className="h-3.5 w-3.5" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0"
+                                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-full"
                                                 onClick={() => handleDelete(cat.id)}
                                             >
-                                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive transition-colors" />
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col gap-1 text-[11px]" onClick={() => toggleSelection(cat.id)}>
-                                        <div className="flex items-center justify-between cursor-pointer gap-2">
-                                            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                                                <span className="text-muted-foreground font-medium uppercase tracking-widest text-[9px] opacity-70">Categoria</span>
-                                                <span className="text-foreground font-bold truncate">
-                                                    {cat.age_group}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                                                <span className="text-muted-foreground font-medium uppercase tracking-widest text-[9px] opacity-70">Peso</span>
-                                                <span className="text-foreground font-bold truncate">
-                                                    {cat.min_weight === -1 && cat.max_weight === -1
+
+                                    {/* Body Section: Category & Pricing */}
+                                    <div className="space-y-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mb-1">Categoria</span>
+                                            <span className="font-bold text-sm text-foreground truncate">
+                                                {cat.age_group}
+                                            </span>
+                                        </div>
+
+                                        {/* Stats Grid */}
+                                        <div className="grid grid-cols-2 gap-4 pb-1">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70">Peso</span>
+                                                <span className="text-foreground font-bold">
+                                                    {(!cat.min_weight || cat.min_weight === -1) && (!cat.max_weight || cat.max_weight === -1)
                                                         ? '---'
                                                         : cat.min_weight === 0 && cat.max_weight === 0
                                                             ? 'Livre'
-                                                            : `${cat.min_weight}-${cat.max_weight}kg`}
+                                                            : `${cat.min_weight ?? 0}-${cat.max_weight ?? 0}kg`}
                                                 </span>
                                             </div>
-                                            <div className="flex flex-col items-end shrink-0">
-                                                <span className="text-muted-foreground font-medium uppercase tracking-widest text-[9px] opacity-70">Inscrição</span>
-                                                <span className="text-primary font-black">
-                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cat.registration_fee)}
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70">Idade</span>
+                                                <span className="text-foreground font-bold">
+                                                    {(!cat.min_age || cat.min_age === -1) && (!cat.max_age || cat.max_age === -1)
+                                                        ? '---'
+                                                        : cat.min_age === 0 && cat.max_age === 0
+                                                            ? 'Livre'
+                                                            : `${cat.min_age ?? 0}-${cat.max_age ?? 0} anos`}
                                                 </span>
                                             </div>
                                         </div>
+
+                                        {/* Activity Bar Section */}
+                                        <div className="pt-3 border-t border-primary/5">
+                                            <div className="flex items-end justify-between mb-2">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70">Inscritos</span>
+                                                    <div className="flex items-baseline gap-1.5">
+                                                        <span className={`text-xl font-black ${cat.registrations?.length ? 'text-primary' : 'text-muted-foreground/40'}`}>
+                                                            {cat.registrations?.length || 0}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground font-medium underline underline-offset-2 decoration-primary/20">atletas</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70 mb-0.5">Financeiro</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[10px] font-black text-green-600 leading-none">
+                                                                {cat.registrations?.filter(r => r.status === 'paid').length || 0} P
+                                                            </span>
+                                                            <span className="text-[10px] font-black text-amber-600 leading-none">
+                                                                {cat.registrations?.filter(r => r.status === 'pending_payment').length || 0} A
+                                                            </span>
+                                                        </div>
+                                                        <div className="h-6 w-[2px] bg-primary/10 rounded-full" />
+                                                        <span className="text-primary font-black text-sm">
+                                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cat.registration_fee)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Selection Check for Bulk Actions */}
+                                {cat.registrations?.length ? (
+                                    <div className="absolute bottom-0 right-0 p-1">
+                                        <div className="bg-primary/10 text-primary text-[8px] font-black uppercase px-1.5 py-0.5 rounded-tl-lg">Ativa</div>
+                                    </div>
+                                ) : null}
+
+                                {/* Selection Checkbox */}
+                                <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                            e.stopPropagation()
+                                            toggleSelection(cat.id)
+                                        }}
+                                        className="w-4 h-4 rounded border-primary/20 text-primary cursor-pointer"
+                                    />
                                 </div>
                             </Card>
                         )

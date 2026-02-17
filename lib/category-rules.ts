@@ -27,24 +27,7 @@ export function getAgeGroupContext(ageGroupName: string): AgeGroupContext {
 }
 
 export function isCompatible(beltName: string, ageGroupName: string): { compatible: boolean; error?: string } {
-    const beltType = getBeltType(beltName);
-    const ctx = getAgeGroupContext(ageGroupName);
-
-    if (beltType === 'infantil') {
-        if (!ctx.isChild) {
-            return { compatible: false, error: "Faixas infantis permitem apenas categorias Infantil ou Infanto-Juvenil." };
-        }
-    } else if (beltType === 'adulto') {
-        if (ctx.isChild) {
-            return { compatible: false, error: "Faixas adultas não permitem categorias infantis." };
-        }
-        if (ctx.isAbsolute) {
-            if (ctx.isMaster || ctx.isJuvenile) {
-                return { compatible: false, error: "Absoluto permitido apenas para categorias Adulto Feminino/Masculino." };
-            }
-        }
-    }
-
+    // Validação desativada a pedido do usuário para permitir maior flexibilidade
     return { compatible: true };
 }
 

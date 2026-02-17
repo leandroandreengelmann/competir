@@ -23,6 +23,8 @@ interface Category {
     belt: string
     min_weight: number
     max_weight: number
+    min_age: number
+    max_age: number
     age_group: string
     registration_fee: number
 }
@@ -264,6 +266,15 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                                                 `${category.min_weight}kg - ${category.max_weight}kg`
                                                             )}
                                                         </div>
+                                                        <div className="text-sm font-bold text-primary">
+                                                            {category.min_age === -1 && category.max_age === -1 ? (
+                                                                null
+                                                            ) : category.min_age === 0 && category.max_age === 0 ? (
+                                                                'Idade: Livre'
+                                                            ) : (
+                                                                `Idade: ${category.min_age} - ${category.max_age} anos`
+                                                            )}
+                                                        </div>
                                                         <div className="text-lg font-bold text-primary mt-2">
                                                             R$ {category.registration_fee.toFixed(2)}
                                                         </div>
@@ -303,6 +314,18 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                             'Livre'
                                         ) : (
                                             `${selectedCategory.min_weight}kg - ${selectedCategory.max_weight}kg`
+                                        )}
+                                    </span>
+                                </div>
+                            )}
+                            {selectedCategory.min_age !== -1 && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Idade:</span>
+                                    <span className="font-bold text-primary">
+                                        {selectedCategory.min_age === 0 && selectedCategory.max_age === 0 ? (
+                                            'Livre'
+                                        ) : (
+                                            `${selectedCategory.min_age} - ${selectedCategory.max_age} anos`
                                         )}
                                     </span>
                                 </div>

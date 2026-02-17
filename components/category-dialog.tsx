@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { createCategoryAction, updateCategoryAction } from "@/app/actions/categories"
 import { getAgeGroupContext, getBeltType, isCompatible } from "@/lib/category-rules"
+import { toast } from "sonner"
 
 interface Category {
     id?: string
@@ -30,6 +31,8 @@ interface Category {
     belt: string // legada
     min_weight: number
     max_weight: number
+    min_age: number
+    max_age: number
     age_group: string // legada
     registration_fee: number
 }
@@ -60,6 +63,8 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
     const [selectedAgeGroupId, setSelectedAgeGroupId] = React.useState<string | undefined>(category?.age_group_id)
     const [minWeight, setMinWeight] = React.useState<string>(category?.min_weight && category.min_weight > 0 ? category.min_weight.toString() : '')
     const [maxWeight, setMaxWeight] = React.useState<string>(category?.max_weight && category.max_weight > 0 ? category.max_weight.toString() : '')
+    const [minAge, setMinAge] = React.useState<string>(category?.min_age && category.min_age > 0 ? category.min_age.toString() : '')
+    const [maxAge, setMaxAge] = React.useState<string>(category?.max_age && category.max_age > 0 ? category.max_age.toString() : '')
     const [registrationFee, setRegistrationFee] = React.useState<string>(category?.registration_fee ? category.registration_fee.toString() : '0')
 
     // Resetar estados quando o dialog abre
@@ -69,6 +74,8 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
             setSelectedAgeGroupId(category?.age_group_id)
             setMinWeight(category?.min_weight && category.min_weight > 0 ? category.min_weight.toString() : '')
             setMaxWeight(category?.max_weight && category.max_weight > 0 ? category.max_weight.toString() : '')
+            setMinAge(category?.min_age && category.min_age > 0 ? category.min_age.toString() : '')
+            setMaxAge(category?.max_age && category.max_age > 0 ? category.max_age.toString() : '')
             setRegistrationFee(category?.registration_fee ? category.registration_fee.toString() : '0')
         }
     }, [open, category])
@@ -110,8 +117,18 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
         let result
         if (isEditing && category?.id) {
             result = await updateCategoryAction(category.id, prevState, formData)
+            if (result.success) {
+                toast.success("Categoria atualizada com sucesso!")
+            }
         } else {
             result = await createCategoryAction(prevState, formData)
+            if (result.success) {
+                toast.success("Categoria criada com sucesso!")
+            }
+        }
+
+        if (!result.success && result.error) {
+            toast.error(result.error)
         }
 
         if (result.success) {
@@ -177,6 +194,31 @@ export function CategoryDialog({ open, onOpenChange, category, belts, ageGroups,
                                 value={maxWeight}
                                 onChange={(e) => setMaxWeight(e.target.value)}
                                 placeholder="Deixe vazio para livre"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="min_age">Idade Inicial - Opcional</Label>
+                            <Input
+                                id="min_age"
+                                name="min_age"
+                                type="number"
+                                value={minAge}
+                                onChange={(e) => setMinAge(e.target.value)}
+                                placeholder="Livre"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="max_age">Idade Final - Opcional</Label>
+                            <Input
+                                id="max_age"
+                                name="max_age"
+                                type="number"
+                                value={maxAge}
+                                onChange={(e) => setMaxAge(e.target.value)}
+                                placeholder="Livre"
                             />
                         </div>
                     </div>

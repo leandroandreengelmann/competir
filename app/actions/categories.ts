@@ -19,6 +19,8 @@ export async function createCategoryAction(prevState: ActionState, formData: For
     const age_group_id = formData.get('age_group_id') as string
     const min_weight_raw = formData.get('min_weight') as string
     const max_weight_raw = formData.get('max_weight') as string
+    const min_age_raw = formData.get('min_age') as string
+    const max_age_raw = formData.get('max_age') as string
     const registration_fee = parseFloat(formData.get('registration_fee') as string) || 0
 
     if (!belt_id || !age_group_id) {
@@ -35,6 +37,15 @@ export async function createCategoryAction(prevState: ActionState, formData: For
 
     if (hasMinWeight && isNaN(min_weight)) min_weight = -1
     if (hasMaxWeight && isNaN(max_weight)) max_weight = -1
+
+    const hasMinAge = min_age_raw && min_age_raw.trim() !== ''
+    const hasMaxAge = max_age_raw && max_age_raw.trim() !== ''
+
+    let min_age = hasMinAge ? parseInt(min_age_raw) : -1
+    let max_age = hasMaxAge ? parseInt(max_age_raw) : -1
+
+    if (hasMinAge && isNaN(min_age)) min_age = -1
+    if (hasMaxAge && isNaN(max_age)) max_age = -1
 
     try {
         const supabase = await createClient()
@@ -55,6 +66,8 @@ export async function createCategoryAction(prevState: ActionState, formData: For
                 age_group: ageData?.name || '',
                 min_weight,
                 max_weight,
+                min_age,
+                max_age,
                 registration_fee
             })
 
@@ -79,6 +92,8 @@ export async function updateCategoryAction(id: string, prevState: ActionState, f
     const age_group_id = formData.get('age_group_id') as string
     const min_weight_raw = formData.get('min_weight') as string
     const max_weight_raw = formData.get('max_weight') as string
+    const min_age_raw = formData.get('min_age') as string
+    const max_age_raw = formData.get('max_age') as string
     const registration_fee = parseFloat(formData.get('registration_fee') as string) || 0
 
     if (!belt_id || !age_group_id) {
@@ -95,6 +110,15 @@ export async function updateCategoryAction(id: string, prevState: ActionState, f
 
     if (hasMinWeight && isNaN(min_weight)) min_weight = -1
     if (hasMaxWeight && isNaN(max_weight)) max_weight = -1
+
+    const hasMinAge = min_age_raw && min_age_raw.trim() !== ''
+    const hasMaxAge = max_age_raw && max_age_raw.trim() !== ''
+
+    let min_age = hasMinAge ? parseInt(min_age_raw) : -1
+    let max_age = hasMaxAge ? parseInt(max_age_raw) : -1
+
+    if (hasMinAge && isNaN(min_age)) min_age = -1
+    if (hasMaxAge && isNaN(max_age)) max_age = -1
 
     try {
         const supabase = await createClient()
@@ -114,6 +138,8 @@ export async function updateCategoryAction(id: string, prevState: ActionState, f
                 age_group: ageData?.name || '',
                 min_weight,
                 max_weight,
+                min_age,
+                max_age,
                 registration_fee
             })
             .eq('id', id)

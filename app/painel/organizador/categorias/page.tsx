@@ -10,7 +10,10 @@ async function getCategories(userId: string) {
 
     const { data: categories, error } = await supabase
         .from('categories')
-        .select('*')
+        .select(`
+            *,
+            registrations(status)
+        `)
         .eq('organizer_id', userId)
         .order('belt')
         .order('min_weight')
