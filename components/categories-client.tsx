@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Pencil, Trash2, Tags, Sparkles, Search, AlertCircle, Filter, Activity } from "lucide-react"
+import { Plus, Pencil, Trash2, Tags, Sparkles, Search, AlertCircle, Filter, Activity, Upload, Loader2 } from "lucide-react"
 import { CategoryDialog } from "@/components/category-dialog"
 import { AICategoryDialog } from "@/components/ai-category-dialog"
 import { AICategoryCheckerDialog } from "@/components/ai-category-checker-dialog"
-import { deleteCategoryAction, deleteAllCategoriesAction, deleteSelectedCategoriesAction, updateAllCategoriesFeeAction } from "@/app/actions/categories"
+import { deleteCategoryAction, deleteAllCategoriesAction, deleteSelectedCategoriesAction, updateAllCategoriesFeeAction, importCategoriesCSVAction } from "@/app/actions/categories"
 import { toast } from "sonner"
 import {
     AlertDialog,
@@ -77,6 +77,8 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
     const [newBulkFee, setNewBulkFee] = useState<string>("0")
     const [isUpdatingFee, setIsUpdatingFee] = useState(false)
     const [showOnlyActive, setShowOnlyActive] = useState(false)
+    const [isImporting, setIsImporting] = useState(false)
+    const fileInputRef = React.useRef<HTMLInputElement>(null)
 
     // Normalização para busca
     // Normalização para busca
@@ -122,10 +124,15 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
         setIsDialogOpen(true)
     }
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (category: Category) => {
+        if (category.registrations && category.registrations.length > 0) {
+            toast.error("Esta categoria possui inscrições e não pode ser excluída.")
+            return
+        }
+
         if (!confirm("Tem certeza que deseja excluir esta categoria?")) return
 
-        const result = await deleteCategoryAction(id)
+        const result = await deleteCategoryAction(category.id)
         if (result.success) {
             toast.success("Categoria excluída com sucesso!")
         } else {
@@ -168,14 +175,72 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
     }
 
     const handleBulkDelete = async () => {
-        const ids = Array.from(selectedIds)
-        const result = await deleteSelectedCategoriesAction(ids)
-        if (result.success) {
-            toast.success(result.message)
-            setSelectedIds(new Set())
-        } else {
-            toast.error(result.error || "Erro ao excluir categorias.")
+        const promise = deleteSelectedCategoriesAction(Array.from(selectedIds))
+        toast.promise(promise, {
+            loading: 'Excluindo categorias...',
+            success: (res) => {
+                if (res.error) throw new Error(res.error)
+                setSelectedIds(new Set())
+                return res.message || 'Categorias excluídas!'
+            },
+            error: (err) => err.message
+        })
+    }
+
+    const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsImporting(true)
+        const reader = new FileReader()
+        reader.onload = async (event) => {
+            try {
+                const text = event.target?.result as string
+                const lines = text.split('\n').filter(line => line.trim())
+
+                // Regex robusto para lidar com vírgulas dentro de aspas (ex: "Cinza, Amarela e Laranja")
+                const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+                const beltHeaderIndex = headers.indexOf('faixa')
+
+                const rows = lines.slice(1).map(line => {
+                    let values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''))
+
+                    // Lógica inteligente: se a linha tem mais colunas que o cabeçalho,
+                    // mescla as colunas extras de volta para o campo 'faixa' (beltHeaderIndex).
+                    if (values.length > headers.length && beltHeaderIndex !== -1) {
+                        const extraCount = values.length - headers.length
+                        const beltValue = values.slice(beltHeaderIndex, beltHeaderIndex + extraCount + 1).join(', ')
+                        const newValues = [
+                            ...values.slice(0, beltHeaderIndex),
+                            beltValue,
+                            ...values.slice(beltHeaderIndex + extraCount + 1)
+                        ]
+                        values = newValues
+                    }
+
+                    const obj: any = {}
+                    headers.forEach((header, i) => {
+                        obj[header] = values[i]
+                    })
+                    return obj
+                })
+
+                const res = await importCategoriesCSVAction(rows)
+                if (res.success) {
+                    toast.success(res.message)
+                    router.refresh()
+                } else {
+                    toast.error(res.error || 'Erro ao importar CSV')
+                }
+            } catch (error) {
+                console.error(error)
+                toast.error('Garantir que o arquivo CSV está no formato correto.')
+            } finally {
+                setIsImporting(false)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+            }
         }
+        reader.readAsText(file)
     }
 
     const toggleSelection = (id: string) => {
@@ -214,7 +279,7 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                                     <AlertDialogTitle>Excluir {selectedIds.size} categorias?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         Esta ação excluirá permanentemente as categorias selecionadas.
-                                        Esta ação não pode ser desfeita.
+                                        Nota: Categorias com atletas inscritos serão ignoradas pelo sistema de segurança.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -233,6 +298,22 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                     >
                         <DollarSign className="h-4 w-4 text-primary" />
                         Alterar preço de todas
+                    </Button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".csv"
+                        onChange={handleCSVUpload}
+                    />
+                    <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isImporting}
+                        className="gap-2 w-full sm:w-auto border-primary/20 hover:border-primary/50 hover:bg-primary/5"
+                    >
+                        {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-primary" />}
+                        Importar CSV
                     </Button>
                     <Button
                         variant="outline"
@@ -379,8 +460,10 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-full"
-                                                onClick={() => handleDelete(cat.id)}
+                                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive rounded-full disabled:opacity-30 disabled:hover:bg-transparent"
+                                                onClick={() => handleDelete(cat)}
+                                                disabled={!!(cat.registrations && cat.registrations.length > 0)}
+                                                title={cat.registrations && cat.registrations.length > 0 ? "Categorias com inscritos não podem ser excluídas" : "Excluir categoria"}
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
@@ -401,21 +484,25 @@ export function CategoriesClient({ initialCategories, belts, ageGroups }: Catego
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70">Peso</span>
                                                 <span className="text-foreground font-bold">
-                                                    {(!cat.min_weight || cat.min_weight === -1) && (!cat.max_weight || cat.max_weight === -1)
+                                                    {((!cat.min_weight || cat.min_weight === -1) && (!cat.max_weight || cat.max_weight === -1))
                                                         ? '---'
                                                         : cat.min_weight === 0 && cat.max_weight === 0
                                                             ? 'Livre'
-                                                            : `${cat.min_weight ?? 0}-${cat.max_weight ?? 0}kg`}
+                                                            : cat.min_weight === cat.max_weight
+                                                                ? `${cat.min_weight === -1 ? 0 : cat.min_weight}kg`
+                                                                : `${cat.min_weight === -1 ? 0 : cat.min_weight}kg a ${cat.max_weight === -1 ? 0 : cat.max_weight}kg`}
                                                 </span>
                                             </div>
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="text-muted-foreground font-black uppercase tracking-widest text-[9px] opacity-70">Idade</span>
                                                 <span className="text-foreground font-bold">
-                                                    {(!cat.min_age || cat.min_age === -1) && (!cat.max_age || cat.max_age === -1)
+                                                    {((!cat.min_age || cat.min_age === -1) && (!cat.max_age || cat.max_age === -1))
                                                         ? '---'
                                                         : cat.min_age === 0 && cat.max_age === 0
                                                             ? 'Livre'
-                                                            : `${cat.min_age ?? 0}-${cat.max_age ?? 0} anos`}
+                                                            : cat.min_age === cat.max_age
+                                                                ? `${cat.min_age === -1 ? 0 : cat.min_age} anos`
+                                                                : `de ${cat.min_age === -1 ? 0 : cat.min_age} a ${cat.max_age === -1 ? 0 : cat.max_age} anos`}
                                                 </span>
                                             </div>
                                         </div>

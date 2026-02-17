@@ -262,8 +262,10 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                                                 null
                                                             ) : category.min_weight === 0 && category.max_weight === 0 ? (
                                                                 'Livre'
+                                                            ) : category.min_weight === category.max_weight ? (
+                                                                `${category.min_weight === -1 ? 0 : category.min_weight}kg`
                                                             ) : (
-                                                                `${category.min_weight}kg - ${category.max_weight}kg`
+                                                                `${category.min_weight === -1 ? 0 : category.min_weight}kg a ${category.max_weight === -1 ? 0 : category.max_weight}kg`
                                                             )}
                                                         </div>
                                                         <div className="text-sm font-bold text-primary">
@@ -271,8 +273,10 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                                                 null
                                                             ) : category.min_age === 0 && category.max_age === 0 ? (
                                                                 'Idade: Livre'
+                                                            ) : category.min_age === category.max_age ? (
+                                                                `Idade: ${category.min_age === -1 ? 0 : category.min_age} anos`
                                                             ) : (
-                                                                `Idade: ${category.min_age} - ${category.max_age} anos`
+                                                                `Idade: de ${category.min_age === -1 ? 0 : category.min_age} a ${category.max_age === -1 ? 0 : category.max_age} anos`
                                                             )}
                                                         </div>
                                                         <div className="text-lg font-bold text-primary mt-2">
@@ -312,8 +316,10 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                     <span className="font-bold text-primary">
                                         {selectedCategory.min_weight === 0 && selectedCategory.max_weight === 0 ? (
                                             'Livre'
+                                        ) : selectedCategory.min_weight === selectedCategory.max_weight ? (
+                                            `${selectedCategory.min_weight === -1 ? 0 : selectedCategory.min_weight}kg`
                                         ) : (
-                                            `${selectedCategory.min_weight}kg - ${selectedCategory.max_weight}kg`
+                                            `${selectedCategory.min_weight === -1 ? 0 : selectedCategory.min_weight}kg a ${selectedCategory.max_weight === -1 ? 0 : selectedCategory.max_weight}kg`
                                         )}
                                     </span>
                                 </div>
@@ -324,8 +330,10 @@ export function RegistrationFormClient({ event, categories, user, existingCatego
                                     <span className="font-bold text-primary">
                                         {selectedCategory.min_age === 0 && selectedCategory.max_age === 0 ? (
                                             'Livre'
+                                        ) : selectedCategory.min_age === selectedCategory.max_age ? (
+                                            `${selectedCategory.min_age === -1 ? 0 : selectedCategory.min_age} anos`
                                         ) : (
-                                            `${selectedCategory.min_age} - ${selectedCategory.max_age} anos`
+                                            `de ${selectedCategory.min_age === -1 ? 0 : selectedCategory.min_age} a ${selectedCategory.max_age === -1 ? 0 : selectedCategory.max_age} anos`
                                         )}
                                     </span>
                                 </div>

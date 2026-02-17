@@ -173,6 +173,9 @@ export async function deleteCategoryAction(id: string) {
 
         if (error) {
             console.error('Erro ao excluir categoria:', error)
+            if (error.code === '23503') {
+                return { error: 'Não é possível excluir categorias com inscrições ativas.' }
+            }
             return { error: 'Erro ao excluir categoria.' }
         }
 
@@ -203,6 +206,9 @@ export async function deleteSelectedCategoriesAction(ids: string[]): Promise<Act
 
         if (error) {
             console.error('Erro ao excluir categorias em lote:', error)
+            if (error.code === '23503') {
+                return { error: 'Uma ou mais categorias selecionadas possuem inscrições e não podem ser excluídas.' }
+            }
             return { error: 'Erro ao excluir as categorias selecionadas.' }
         }
 
@@ -295,5 +301,105 @@ export async function auditCategoriesAction() {
     } catch (error) {
         console.error('Erro na auditoria:', error)
         return { error: 'Erro ao processar auditoria.' }
+    }
+}
+
+export async function importCategoriesCSVAction(categories: any[]): Promise<ActionState & { count?: number }> {
+    const user = await getCurrentUser()
+    if (!user || user.role !== 'organizador') return { error: 'Não autorizado.' }
+
+    if (!categories || categories.length === 0) {
+        return { error: 'Nenhuma categoria para importar.' }
+    }
+
+    try {
+        const supabase = await createClient()
+
+        // 1. Carregar todos os cintos e categorias de idade para busca em memória (cache)
+        const [{ data: belts }, { data: ageGroups }] = await Promise.all([
+            supabase.from('belts').select('id, name'),
+            supabase.from('age_groups').select('id, name')
+        ])
+
+        if (!belts || !ageGroups) {
+            return { error: 'Falha ao carregar dados auxiliares (faixas/idades).' }
+        }
+
+        // Função para normalizar strings (remove hífens, espaços extras e acentos básicos)
+        const normalize = (str: string) => str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // remove acentos
+            .replace(/[^a-z0-9]/g, "")      // remove tudo que não for letra ou número
+
+        const beltMap = new Map(belts.map(b => [normalize(b.name), b.id]))
+        const ageGroupMap = new Map(ageGroups.map(a => [normalize(a.name), a.id]))
+
+        const insertions = categories.map(cat => {
+            // Resolver ID da faixa
+            const belt_id = beltMap.get(normalize(cat.faixa))
+
+            // Resolver ID da categoria de idade (Divisão + Sexo)
+            const ageGroupSearchName = `${cat.divisao} ${cat.sexo}`
+            const age_group_id = ageGroupMap.get(normalize(ageGroupSearchName))
+
+            // Parsing de Idade (ex: "de 7 até 9 anos")
+            const ageNumbers = cat.idade.match(/\d+/g)
+            let min_age = -1
+            let max_age = -1
+            if (ageNumbers && ageNumbers.length >= 2) {
+                min_age = parseInt(ageNumbers[0])
+                max_age = parseInt(ageNumbers[1])
+            } else if (ageNumbers && ageNumbers.length === 1) {
+                min_age = parseInt(ageNumbers[0])
+                max_age = parseInt(ageNumbers[0])
+            }
+
+            // Pesos
+            const min_weight = parseFloat(cat.peso_min_kg) || -1
+            const max_weight = parseFloat(cat.peso_max_kg) || -1
+            const registration_fee = parseFloat(cat.valor_reais) || 0
+
+            if (!belt_id || !age_group_id) {
+                console.warn(`Pulando categoria: Faixa (${cat.faixa}) ou Idade (${ageGroupSearchName}) não encontrada.`)
+                return null
+            }
+
+            return {
+                organizer_id: user.id,
+                belt_id,
+                age_group_id,
+                belt: cat.faixa,
+                age_group: `${cat.divisao} ${cat.sexo}`, // Formato "Mirim Masculino"
+                min_weight,
+                max_weight,
+                min_age,
+                max_age,
+                registration_fee
+            }
+        }).filter(Boolean)
+
+        if (insertions.length === 0) {
+            return { error: 'Nenhuma categoria válida encontrada no CSV. Verifique se os nomes das faixas e divisões estão corretos.' }
+        }
+
+        const { error } = await supabase
+            .from('categories')
+            .insert(insertions)
+
+        if (error) {
+            console.error('Erro na importação em lote:', error)
+            return { error: 'Erro ao salvar as categorias importadas.' }
+        }
+
+        revalidatePath('/painel/organizador/categorias')
+        return {
+            success: true,
+            message: `${insertions.length} categorias importadas com sucesso!`,
+            count: insertions.length
+        }
+    } catch (error) {
+        console.error(error)
+        return { error: 'Erro ao processar importação.' }
     }
 }
