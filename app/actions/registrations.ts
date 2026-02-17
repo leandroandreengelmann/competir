@@ -16,6 +16,8 @@ type Category = {
     belt: string
     min_weight: number
     max_weight: number
+    min_age: number
+    max_age: number
     age_group: string
     registration_fee: number
 }
@@ -78,6 +80,8 @@ export async function getEventCategoriesForRegistrationAction(eventId: string): 
                 belt, 
                 min_weight, 
                 max_weight, 
+                min_age,
+                max_age,
                 age_group, 
                 registration_fee,
                 event_categories!inner(event_id)
@@ -96,6 +100,8 @@ export async function getEventCategoriesForRegistrationAction(eventId: string): 
             belt: c.belt,
             min_weight: c.min_weight,
             max_weight: c.max_weight,
+            min_age: c.min_age,
+            max_age: c.max_age,
             age_group: c.age_group,
             registration_fee: c.registration_fee
         })) as Category[]
